@@ -20,8 +20,10 @@
 #include <sniper/cache/Cache.h>
 #include <sniper/net/Url.h>
 #include <sniper/std/any.h>
+#include <sniper/std/chrono.h>
 #include <sniper/std/functional.h>
 #include <sniper/std/memory.h>
+#include <sniper/std/optional.h>
 #include <sniper/std/string.h>
 #include <sniper/std/tuple.h>
 #include <sniper/std/vector.h>
@@ -65,12 +67,16 @@ public:
 
     [[nodiscard]] string_view data() const noexcept;
     [[nodiscard]] size_t generation() const noexcept;
+    [[nodiscard]] milliseconds latency() const noexcept;
 
     Method method = Method::Get;
     bool keep_alive = true;
     net::Url url;
 
     any user_data;
+    optional<int64_t> user_int;
+    string user_string;
+
     string close_reason;
 
 private:
@@ -86,6 +92,8 @@ private:
 
     size_t _sent = 0;
     size_t _generation = 0;
+    steady_clock::time_point _ts_start;
+    steady_clock::time_point _ts_end;
 };
 
 inline intrusive_ptr<Request> make_request()

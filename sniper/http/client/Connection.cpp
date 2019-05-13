@@ -157,6 +157,7 @@ void Connection::close(bool run_cb_disconnect, string_view reason) noexcept
         if (_cb) {
             for (auto&& item : _in) {
                 get<0>(item)->close_reason = reason;
+                get<0>(item)->_ts_end = get<0>(item)->_ts_start;
                 _user_cb.emplace_back(std::move(item));
             }
         }
@@ -244,6 +245,7 @@ void Connection::cb_read(ev::io& w, int revents) noexcept
                 auto item = std::move(_in.front());
                 _in.pop_front();
 
+                get<intrusive_ptr<Request>>(item)->_ts_end = steady_clock::now();
                 if (_cb)
                     _user_cb.emplace_back(item);
 

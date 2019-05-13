@@ -129,6 +129,9 @@ void Request::clear()
     url.clear();
 
     user_data.reset();
+    user_int = std::nullopt;
+    user_string.clear();
+
     close_reason.clear();
 
     _iov.clear();
@@ -138,6 +141,8 @@ void Request::clear()
 
     _sent = 0;
     _generation = 0;
+    _ts_start = {};
+    _ts_end = _ts_start;
 }
 
 string_view Request::data() const noexcept
@@ -227,6 +232,9 @@ SendStatus Request::send(int fd) noexcept
 
         // read
         if (ssize_t count = writev(fd, _iov.data(), _iov.size()); count > 0) {
+            if (!_sent)
+                _ts_start = steady_clock::now();
+
             _sent += count;
 
             if (!std::get<0>(_first_headers).empty())
@@ -275,6 +283,11 @@ void Request::set_ready(bool full_url) noexcept
     reinit_view(_data);
 
     _generation++;
+}
+
+milliseconds Request::latency() const noexcept
+{
+    return duration_cast<milliseconds>(_ts_end - _ts_start);
 }
 
 } // namespace sniper::http::client
