@@ -30,52 +30,6 @@
 
 namespace sniper::http::client {
 
-namespace {
-
-small_vector<uint32_t, 8> resolve_hostname(const string& hostname)
-{
-    SPDLOG_TRACE(__PRETTY_FUNCTION__);
-
-    small_vector<uint32_t, 8> ip;
-
-    hostent* h = nullptr;
-    in_addr** addr_list = nullptr;
-
-    size_t buf_len = 1024;
-    char* buf = (char*)malloc(buf_len);
-    if (!buf)
-        return ip;
-
-    int rc, err;
-    hostent hbuf{};
-    while ((rc = gethostbyname_r(hostname.c_str(), &hbuf, buf, buf_len, &h, &err)) == ERANGE) {
-        /* expand buf */
-        buf_len *= 2;
-        char* tmp = (char*)realloc(buf, buf_len);
-        if (tmp == nullptr)
-            goto finish;
-        else
-            buf = tmp;
-    }
-
-    if (rc != 0)
-        goto finish;
-
-    if (!h || h->h_addrtype != AF_INET)
-        return ip;
-
-    addr_list = (struct in_addr**)h->h_addr_list;
-    for (int i = 0; addr_list[i] != nullptr; i++)
-        ip.emplace_back(addr_list[i]->s_addr);
-
-finish:
-    free(buf);
-
-    return ip;
-}
-
-} // namespace
-
 Pool::Pool(event::loop_ptr loop, PoolConfig config, const net::Domain& domain, bool is_proxy,
            const function<void(intrusive_ptr<Request>&&, intrusive_ptr<Response>&&)>& cb) :
     _loop(std::move(loop)),
@@ -85,7 +39,7 @@ Pool::Pool(event::loop_ptr loop, PoolConfig config, const net::Domain& domain, b
 
     if (_domain.nodes.empty()) {
         // TODO: sync, async resolv
-        auto ip_list = resolve_hostname((string)_domain.name());
+        auto ip_list = net::resolve_domain((string)_domain.name());
         for (auto& ip : ip_list)
             _domain.nodes.emplace_back(ip, _domain.port());
     }
