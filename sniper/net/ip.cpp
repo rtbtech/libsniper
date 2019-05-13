@@ -19,6 +19,7 @@
 
 #include <arpa/inet.h>
 #include <cstring>
+#include <netdb.h>
 #include <re2/re2.h>
 #include <sniper/std/array.h>
 #include "ip.h"
@@ -115,6 +116,43 @@ bool ip_from_sv(string_view str, uint32_t& dst)
     buf[str.copy(buf.data(), len)] = '\0';
 
     return inet_pton(AF_INET, buf.data(), &dst) == 1;
+}
+
+small_vector<uint32_t, 8> resolve_domain(const string& domain)
+{
+    small_vector<uint32_t, 8> ip;
+
+    if (domain.empty())
+        return ip;
+
+    size_t buf_len = 1024;
+    char* buf = (char*)malloc(buf_len);
+    if (!buf)
+        return ip;
+
+    int rc, err;
+    hostent hbuf{};
+    hostent* h = nullptr;
+    while ((rc = gethostbyname_r(domain.c_str(), &hbuf, buf, buf_len, &h, &err)) == ERANGE) {
+        /* expand buf */
+        buf_len *= 2;
+        if (char* tmp = (char*)realloc(buf, buf_len); !tmp) {
+            free(buf);
+            return ip;
+        }
+        else {
+            buf = tmp;
+        }
+    }
+
+    if (rc == 0 && h && h->h_addrtype == AF_INET) {
+        auto** addr_list = (struct in_addr**)h->h_addr_list;
+        for (size_t i = 0; addr_list[i] != nullptr; i++)
+            ip.emplace_back(addr_list[i]->s_addr);
+    }
+
+    free(buf);
+    return ip;
 }
 
 } // namespace sniper::net

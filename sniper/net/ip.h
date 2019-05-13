@@ -17,6 +17,7 @@
 #pragma once
 
 #include <netinet/in.h>
+#include <sniper/std/boost_vector.h>
 #include <sniper/std/string.h>
 
 namespace sniper::net {
@@ -39,5 +40,10 @@ namespace sniper::net {
 [[nodiscard]] bool fill_addr(const string& ip, uint16_t port, sockaddr_in& dst);
 
 [[nodiscard]] bool is_ip(string_view str);
+
+/* Returns: ipv4 list for domain
+ *
+ */
+[[nodiscard]] small_vector<uint32_t, 8> resolve_domain(const string& domain);
 
 } // namespace sniper::net
