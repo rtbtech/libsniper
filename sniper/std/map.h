@@ -22,6 +22,7 @@
 namespace sniper {
 
 using std::map;
+using std::multimap;
 using std::unordered_map;
 using std::unordered_multimap;
 
