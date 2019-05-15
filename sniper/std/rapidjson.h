@@ -40,6 +40,12 @@ inline bool is_obj(const T& json, std::string_view str)
 }
 
 template<typename T>
+inline bool is_array(const T& json, std::string_view str)
+{
+    return json.HasMember(str) && json[str].IsArray();
+}
+
+template<typename T>
 inline std::string_view get_string(const T& json, std::string_view str)
 {
     return std::string_view(json[str].GetString(), json[str].GetStringLength());
@@ -58,6 +64,15 @@ template<typename T>
 inline int64_t get_int64(const T& json, std::string_view str)
 {
     return json[str].GetInt64();
+}
+
+template<typename T>
+inline int64_t get_int64(const T& json, std::string_view str, int64_t default_int)
+{
+    if (is_num(json, str))
+        return get_int64(json, str);
+
+    return default_int;
 }
 
 } // namespace sniper
