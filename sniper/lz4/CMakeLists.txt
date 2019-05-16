@@ -17,6 +17,7 @@ set(LIB_SOURCES
     lz4.c
     lz4frame.c
     lz4hc.c
+    utils.cpp
     )
 
 
