@@ -158,6 +158,7 @@ void Connection::close(bool run_cb_disconnect, string_view reason) noexcept
             for (auto&& item : _in) {
                 get<0>(item)->close_reason = reason;
                 get<0>(item)->_ts_end = get<0>(item)->_ts_start;
+                get<1>(item) = ResponseCache::get_intrusive();
                 _user_cb.emplace_back(std::move(item));
             }
         }

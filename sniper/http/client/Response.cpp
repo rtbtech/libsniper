@@ -136,6 +136,7 @@ RecvStatus Response::parse(const MessageConfig& config) noexcept
                 if (_total_size > _buf.size()) {
                     if (_total_size <= config.max_size) {
                         _buf.resize(_total_size + 1);
+                        // TODO: should reinit string_view headers after this
                     }
                     else {
                         log_err("[Client:Response] request size {} > max size {}", _total_size, config.max_size);
