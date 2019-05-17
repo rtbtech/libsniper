@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <sniper/cache/ArrayCache.h>
 #include <sniper/cache/Cache.h>
 #include <sniper/pico/Response.h>
 #include <sniper/std/memory.h>
@@ -63,10 +64,12 @@ private:
 
     pico::Response _pico_resp;
 
-    string _buf;
+    string _buf_header;
+    cache::StringCache::unique _buf_body = cache::StringCache::get_unique_empty();
+
     size_t _read = 0;
     size_t _processed = 0;
-    size_t _total_size = 0;
+    size_t _total = 0;
 };
 
 } // namespace sniper::http::client

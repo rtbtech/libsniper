@@ -273,8 +273,6 @@ void Connection::cb_read(ev::io& w, int revents) noexcept
                 if (!_in.empty()
                     && !get<intrusive_ptr<Response>>(_in.front())
                             ->init(_config.message, get<intrusive_ptr<Response>>(item)->tail())) {
-                    log_err("[Client:Connection] close: tail ({}) > usual buf size ({})",
-                            get<intrusive_ptr<Response>>(item)->tail().size(), _config.message.usual_size);
                     close(true, "tail > usual buf size");
                     return;
                 }
