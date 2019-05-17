@@ -68,7 +68,7 @@ bool Response::init(const MessageConfig& config, string_view tail)
         _buf_header.resize(config.header_max_size);
 
     if (_buf_header.size() < tail.size()) {
-        log_err("[Client:Response] request tail size {} > max header size {}", tail.size(), config.header_max_size);
+        log_err("[Client:Response] response tail size {} > max header size {}", tail.size(), config.header_max_size);
         return false;
     }
 
@@ -121,7 +121,7 @@ ssize_t Response::recv_int(const MessageConfig& config, int fd) noexcept
             return read(fd, _buf_body->data() + _read - _pico_resp.header_size, _total - _read);
     }
 
-    log_err("[Client:Response] request > allocated memory");
+    log_err("[Client:Response] response > allocated memory");
     log_err("[Client:Response] read={}, header_size={}, body_size={}", _read, _pico_resp.header_size,
             _pico_resp.content_length);
     errno = ENOMEM;
@@ -135,7 +135,7 @@ RecvStatus Response::parse(const MessageConfig& config) noexcept
     if (!_total) {
         switch (_pico_resp.parse(_buf_header.data(), _read)) {
             case pico::ParseResult::Err:
-                log_err("[Client:Response] request parse error");
+                log_err("[Client:Response] response parse error");
                 return RecvStatus::Err;
             case pico::ParseResult::Partial:
                 return RecvStatus::Partial;
@@ -153,7 +153,7 @@ RecvStatus Response::parse(const MessageConfig& config) noexcept
                                    _read - _pico_resp.header_size);
                     }
                     else {
-                        log_err("[Client:Response] request body size {} > max body size {}", _pico_resp.content_length,
+                        log_err("[Client:Response] response body size {} > max body size {}", _pico_resp.content_length,
                                 config.body_max_size);
                         return RecvStatus::Err;
                     }

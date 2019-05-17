@@ -159,8 +159,6 @@ void Connection::cb_read(ev::io& w, int revents) noexcept
                 try {
                     intrusive_ptr<Request> tmp(RequestCache::get_raw());
                     if (!tmp->init(_config.message, _in->tail())) {
-                        log_err("[Server:Connection] close: tail ({}) > usual buf size ({})", _in->tail().size(),
-                                _config.message.usual_size);
                         close();
                         return;
                     }

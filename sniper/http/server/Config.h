@@ -23,8 +23,8 @@ namespace sniper::http::server {
 
 struct MessageConfig
 {
-    size_t max_size = 128 * 1024;
-    size_t usual_size = 4 * 1024;
+    size_t header_max_size = 4 * 1024;
+    size_t body_max_size = 128 * 1024;
     size_t header_chunk_size = 1024;
 };
 

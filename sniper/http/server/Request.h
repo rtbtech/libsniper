@@ -66,11 +66,12 @@ private:
 
     pico::Request _pico_req;
 
-    string _buf;
-    string_view _tail;
+    string _buf_header;
+    cache::StringCache::unique _buf_body = cache::StringCache::get_unique_empty();
+
     size_t _read = 0;
     size_t _processed = 0;
-    size_t _total_size = 0;
+    size_t _total = 0;
 };
 
 } // namespace sniper::http::server
