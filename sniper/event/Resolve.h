@@ -20,6 +20,7 @@
 #include <sniper/std/chrono.h>
 #include <sniper/std/functional.h>
 #include <sniper/std/set.h>
+#include <sniper/std/string.h>
 #include <thread>
 
 namespace sniper::event {
