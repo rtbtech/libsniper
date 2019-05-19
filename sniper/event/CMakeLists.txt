@@ -9,6 +9,7 @@ set(LIB_HEADERS
     Prepare.h
     Touch.h
     Sig.h
+    Resolve.h
     )
 
 set(LIB_SOURCES
@@ -17,6 +18,7 @@ set(LIB_SOURCES
     Timer.cpp
     TimerDetail.cpp
     Sig.cpp
+    Resolv.cpp
     )
 
 #Library
