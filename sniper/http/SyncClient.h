@@ -19,6 +19,7 @@
 #include <sniper/event/Loop.h>
 #include <sniper/http/Client.h>
 #include <sniper/std/chrono.h>
+#include <sniper/std/vector.h>
 
 /*
  * Usage
@@ -36,19 +37,33 @@ class SyncClient final
 {
 public:
     explicit SyncClient(milliseconds timeout = 1s);
-    explicit SyncClient(client::Config config);
+    explicit SyncClient(const client::Config& config);
 
-    [[nodiscard]] intrusive_ptr<client::Response> get(string_view url) noexcept;
-    [[nodiscard]] intrusive_ptr<client::Response> head(string_view url) noexcept;
-    [[nodiscard]] intrusive_ptr<client::Response> post(string_view url, string_view data) noexcept;
-    [[nodiscard]] intrusive_ptr<client::Response> put(string_view url, string_view data) noexcept;
+    [[nodiscard]] client::ResponsePtr get(string_view url) noexcept;
+    [[nodiscard]] client::ResponsePtr head(string_view url) noexcept;
+    [[nodiscard]] client::ResponsePtr post(string_view url, string_view data) noexcept;
+    [[nodiscard]] client::ResponsePtr put(string_view url, string_view data) noexcept;
+    [[nodiscard]] client::ResponsePtr send(client::RequestPtr&& req) noexcept;
+
+    [[nodiscard]] bool batch_add_get(string_view url) noexcept;
+    [[nodiscard]] bool batch_add_head(string_view url) noexcept;
+    [[nodiscard]] bool batch_add_post(string_view url, string_view data) noexcept;
+    [[nodiscard]] bool batch_add_put(string_view url, string_view data) noexcept;
+    [[nodiscard]] bool batch_add_send(client::RequestPtr&& req) noexcept;
+
+    /* The order of the responses is not guaranteed
+     */
+    [[nodiscard]] vector<client::ResponsePtr> batch_run() noexcept;
 
 private:
-    intrusive_ptr<client::Response> send(client::Method method, string_view url, string_view data) noexcept;
+    void init(const client::Config& config);
+    client::ResponsePtr send(client::Method method, string_view url, string_view data) noexcept;
+    bool add(client::Method method, string_view url, string_view data) noexcept;
 
     event::loop_ptr _loop;
     unique_ptr<Client> _client;
-    intrusive_ptr<client::Response> _resp;
+    vector<client::ResponsePtr> _resp;
+    size_t _count = 0;
 };
 
 } // namespace sniper::http

@@ -72,4 +72,6 @@ private:
     size_t _total = 0;
 };
 
+using ResponsePtr = intrusive_ptr<Response>;
+
 } // namespace sniper::http::client

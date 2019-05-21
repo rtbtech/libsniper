@@ -24,9 +24,15 @@
 
 namespace sniper::net {
 
-Domain::Domain() : _hash(xxhash::na64) {
+Domain::Domain() : _hash(xxhash::na64)
+{
     _name.reserve(64);
     get<1>(_port).reserve(5);
+}
+
+Domain::Domain(string_view name, uint16_t port, string_view port_sv)
+{
+    set(name, port, port_sv);
 }
 
 void Domain::clear() noexcept

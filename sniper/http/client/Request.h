@@ -96,6 +96,8 @@ private:
     steady_clock::time_point _ts_end;
 };
 
+using RequestPtr = intrusive_ptr<Request>;
+
 inline intrusive_ptr<Request> make_request()
 {
     return RequestCache::get_intrusive();

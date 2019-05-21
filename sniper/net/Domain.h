@@ -27,6 +27,7 @@ class Domain final
 {
 public:
     Domain();
+    explicit Domain(string_view name, uint16_t port = 80, string_view port_sv = {});
 
     void clear() noexcept;
     void set(string_view name, uint16_t port = 80, string_view port_sv = {});
