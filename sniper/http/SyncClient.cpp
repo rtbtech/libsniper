@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 
+#include <limits>
 #include "SyncClient.h"
 
 namespace sniper::http {
@@ -24,6 +25,9 @@ namespace sniper::http {
 SyncClient::SyncClient(milliseconds timeout)
 {
     http::client::Config config;
+    config.max_pools = std::numeric_limits<size_t>::max();
+    config.pool.conns_per_ip = 1;
+    config.pool.max_conns = std::numeric_limits<size_t>::max();
     config.pool.connection.response_timeout = timeout;
 
     init(config);

@@ -18,7 +18,7 @@ set(LIB_SOURCES
     Timer.cpp
     TimerDetail.cpp
     Sig.cpp
-    Resolv.cpp
+    Resolve.cpp
     )
 
 #Library
