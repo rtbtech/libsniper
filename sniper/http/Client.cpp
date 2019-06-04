@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-//#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
+//#define SNIPER_TRACE
 #include <sniper/log/log.h>
 #include <sniper/std/check.h>
 #include "Client.h"
@@ -31,7 +31,7 @@ Client::Client(event::loop_ptr loop, client::Config config) : _loop(std::move(lo
 
 bool Client::send(client::Method method, string_view url, string_view data)
 {
-    SPDLOG_TRACE(__PRETTY_FUNCTION__);
+    log_trace(__PRETTY_FUNCTION__);
 
     auto req = client::make_request();
     req->method = method;
@@ -68,7 +68,7 @@ bool Client::put(string_view url, string_view data)
 
 bool Client::send(intrusive_ptr<client::Request>&& req)
 {
-    SPDLOG_TRACE(__PRETTY_FUNCTION__);
+    log_trace(__PRETTY_FUNCTION__);
 
     if (!req)
         return false;
@@ -84,7 +84,7 @@ bool Client::send(intrusive_ptr<client::Request>&& req)
 
 bool Client::send(const net::Domain& domain, intrusive_ptr<client::Request>&& req)
 {
-    SPDLOG_TRACE(__PRETTY_FUNCTION__);
+    log_trace(__PRETTY_FUNCTION__);
 
     if (auto it = _pools.find(domain); it != _pools.end()) {
         it->second.send(std::move(req));

@@ -8,9 +8,6 @@ set(LIB_HEADERS
     )
 
 
-
 find_package(fmt REQUIRED)
-find_package(spdlog REQUIRED)
-
 
 add_custom_target(sniper_${LIB} SOURCES ${LIB_HEADERS})

@@ -16,69 +16,90 @@
 
 #pragma once
 
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/spdlog.h>
+#include <fmt/chrono.h>
+#include <fmt/format.h>
+#include <fmt/time.h>
+#include <sniper/std/string.h>
 
 namespace sniper {
 
 template<typename... Args>
+inline void log(FILE* out, string_view level, const char* fmt, const Args&... args)
+{
+    fmt::memory_buffer buf;
+    fmt::format_to(buf, fmt, args...);
+    fmt::print(out, "[{:%Y-%m-%d %H:%M:%S}] [{}] {}\n", fmt::localtime(time(nullptr)), level,
+               string_view(buf.data(), buf.size()));
+}
+
+template<typename T>
+inline void log(FILE* out, string_view level, const T& msg)
+{
+    fmt::print(out, "[{:%Y-%m-%d %H:%M:%S}] [{}] {}\n", fmt::localtime(time(nullptr)), level, msg);
+}
+
+#ifdef SNIPER_TRACE
+template<typename... Args>
 inline void log_trace(const char* fmt, const Args&... args)
 {
-    spdlog::trace(fmt, args...);
-}
-
-template<typename... Args>
-inline void log_info(const char* fmt, const Args&... args)
-{
-    spdlog::info(fmt, args...);
-}
-
-template<typename... Args>
-inline void log_warn(const char* fmt, const Args&... args)
-{
-    spdlog::warn(fmt, args...);
-}
-
-template<typename... Args>
-inline void log_err(const char* fmt, const Args&... args)
-{
-    spdlog::error(fmt, args...);
-}
-
-template<typename... Args>
-inline void log_crit(const char* fmt, const Args&... args)
-{
-    spdlog::critical(fmt, args...);
+    log(stdout, "trace", fmt, args...);
 }
 
 template<typename T>
 void log_trace(const T& msg)
 {
-    spdlog::trace(msg);
+    log(stdout, "trace", msg);
+}
+#else
+#define log_trace(...) (void)0
+#endif
+
+template<typename... Args>
+inline void log_info(const char* fmt, const Args&... args)
+{
+    log(stdout, "info", fmt, args...);
+}
+
+template<typename... Args>
+inline void log_warn(const char* fmt, const Args&... args)
+{
+    log(stdout, "warning", fmt, args...);
+}
+
+template<typename... Args>
+inline void log_err(const char* fmt, const Args&... args)
+{
+    log(stderr, "error", fmt, args...);
+}
+
+template<typename... Args>
+inline void log_crit(const char* fmt, const Args&... args)
+{
+    log(stderr, "critical", fmt, args...);
 }
 
 template<typename T>
 void log_info(const T& msg)
 {
-    spdlog::info(msg);
+    log(stdout, "info", msg);
 }
 
 template<typename T>
 void log_warn(const T& msg)
 {
-    spdlog::warn(msg);
+    log(stdout, "warning", msg);
 }
 
 template<typename T>
 void log_err(const T& msg)
 {
-    spdlog::error(msg);
+    log(stderr, "error", msg);
 }
 
 template<typename T>
 void log_crit(const T& msg)
 {
-    spdlog::critical(msg);
+    log(stderr, "critical", msg);
 }
 
 } // namespace sniper
