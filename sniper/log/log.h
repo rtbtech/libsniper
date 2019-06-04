@@ -30,12 +30,14 @@ inline void log(FILE* out, string_view level, const char* fmt, const Args&... ar
     fmt::format_to(buf, fmt, args...);
     fmt::print(out, "[{:%Y-%m-%d %H:%M:%S}] [{}] {}\n", fmt::localtime(time(nullptr)), level,
                string_view(buf.data(), buf.size()));
+    fflush(out);
 }
 
 template<typename T>
 inline void log(FILE* out, string_view level, const T& msg)
 {
     fmt::print(out, "[{:%Y-%m-%d %H:%M:%S}] [{}] {}\n", fmt::localtime(time(nullptr)), level, msg);
+    fflush(out);
 }
 
 #ifdef SNIPER_TRACE
