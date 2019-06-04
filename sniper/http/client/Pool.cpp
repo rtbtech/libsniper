@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-//#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
+//#define SNIPER_TRACE
 #include <arpa/inet.h>
 #include <cstdlib>
 #include <netdb.h>
@@ -35,7 +35,7 @@ Pool::Pool(event::loop_ptr loop, PoolConfig config, const net::Domain& domain, b
     _loop(std::move(loop)),
     _config(config), _domain(domain), _is_proxy(is_proxy), _cb(cb)
 {
-    SPDLOG_TRACE(__PRETTY_FUNCTION__);
+    log_trace(__PRETTY_FUNCTION__);
 
     if (_domain.nodes.empty()) {
         // TODO: sync, async resolv
@@ -64,7 +64,7 @@ Pool::Pool(event::loop_ptr loop, PoolConfig config, const net::Domain& domain, b
 
 void Pool::send(intrusive_ptr<Request>&& req)
 {
-    SPDLOG_TRACE(__PRETTY_FUNCTION__);
+    log_trace(__PRETTY_FUNCTION__);
 
     _out.emplace_back(std::move(req));
     if (!_w.is_active())
@@ -73,7 +73,7 @@ void Pool::send(intrusive_ptr<Request>&& req)
 
 void Pool::cb_prepare(ev::prepare& w, int revents)
 {
-    SPDLOG_TRACE(__PRETTY_FUNCTION__);
+    log_trace(__PRETTY_FUNCTION__);
 
     _w.stop();
 
@@ -99,7 +99,7 @@ void Pool::cb_prepare(ev::prepare& w, int revents)
 
 bool Pool::_send(intrusive_ptr<Request>&& req)
 {
-    SPDLOG_TRACE(__PRETTY_FUNCTION__);
+    log_trace(__PRETTY_FUNCTION__);
 
     if (_connecting.empty() && _active.empty())
         return false;
@@ -157,7 +157,7 @@ bool Pool::_send(intrusive_ptr<Request>&& req)
 
 string Pool::debug_info() const
 {
-    SPDLOG_TRACE(__PRETTY_FUNCTION__);
+    log_trace(__PRETTY_FUNCTION__);
 
     string out;
 

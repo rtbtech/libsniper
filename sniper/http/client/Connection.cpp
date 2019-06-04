@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-//#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
+//#define SNIPER_TRACE
 #include <sniper/log/log.h>
 #include <sniper/net/socket.h>
 #include <sniper/std/array.h>
@@ -33,7 +33,7 @@ Connection::Connection(event::loop_ptr loop, ConnectionConfig config, net::Peer 
     _loop(std::move(loop)),
     _config(config), _peer(peer), _is_proxy(is_proxy), _cb(cb)
 {
-    SPDLOG_TRACE("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
+    log_trace("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
 
     check(_loop, "[Client:Connection] loop is nullptr");
 
@@ -54,21 +54,21 @@ Connection::Connection(event::loop_ptr loop, ConnectionConfig config, net::Peer 
 
 Connection::~Connection() noexcept
 {
-    SPDLOG_TRACE("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
+    log_trace("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
 
     close(false, "destructor");
 }
 
 ConnectionStatus Connection::status() const noexcept
 {
-    SPDLOG_TRACE("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
+    log_trace("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
 
     return _status;
 }
 
 bool Connection::send(intrusive_ptr<Request>&& req)
 {
-    SPDLOG_TRACE("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
+    log_trace("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
 
     if (_status != ConnectionStatus::Closed && req) {
         auto resp = ResponseCache::get_intrusive();
@@ -96,7 +96,7 @@ bool Connection::send(intrusive_ptr<Request>&& req)
 
 void Connection::connect()
 {
-    SPDLOG_TRACE("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
+    log_trace("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
 
     if (_status != ConnectionStatus::Closed)
         return;
@@ -144,7 +144,7 @@ void Connection::connect()
 
 void Connection::close(bool run_cb_disconnect, string_view reason) noexcept
 {
-    SPDLOG_TRACE("Conn={:p}, reason={}, {}", reinterpret_cast<const void*>(this), reason, __PRETTY_FUNCTION__);
+    log_trace("Conn={:p}, reason={}, {}", reinterpret_cast<const void*>(this), reason, __PRETTY_FUNCTION__);
 
     if (_status == ConnectionStatus::Ready || _status == ConnectionStatus::Connecting) {
         _w_read.stop();
@@ -174,21 +174,21 @@ void Connection::close(bool run_cb_disconnect, string_view reason) noexcept
 
 void Connection::cb_response_timeout(ev::timer& w, int revents) noexcept
 {
-    SPDLOG_TRACE("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
+    log_trace("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
 
     close(true, "response timeout");
 }
 
 void Connection::cb_connect_timeout(ev::timer& w, int revents) noexcept
 {
-    SPDLOG_TRACE("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
+    log_trace("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
 
     close(true, "connect timeout");
 }
 
 void Connection::cb_write(ev::io& w, int revents) noexcept
 {
-    SPDLOG_TRACE("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
+    log_trace("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
 
     if (_status == ConnectionStatus::Connecting) {
         if (!net::socket::is_connected(w.fd)) {
@@ -206,14 +206,14 @@ void Connection::cb_write(ev::io& w, int revents) noexcept
 
 RecvStatus Connection::read_int(int fd) noexcept
 {
-    SPDLOG_TRACE("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
+    log_trace("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
 
     return get<intrusive_ptr<Response>>(_in.front())->recv(_config.message, fd);
 }
 
 RecvStatus Connection::read_int_empty(int fd) const noexcept
 {
-    SPDLOG_TRACE("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
+    log_trace("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
 
     array<char, 10> buf{};
 
@@ -234,7 +234,7 @@ RecvStatus Connection::read_int_empty(int fd) const noexcept
 
 void Connection::cb_read(ev::io& w, int revents) noexcept
 {
-    SPDLOG_TRACE("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
+    log_trace("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
 
     while (true) {
         if (_status == ConnectionStatus::Closed)
@@ -299,7 +299,7 @@ void Connection::cb_read(ev::io& w, int revents) noexcept
 
 bool Connection::write_int() noexcept
 {
-    SPDLOG_TRACE("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
+    log_trace("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
 
     while (true) {
         if (_status == ConnectionStatus::Closed || _out.empty())
@@ -321,7 +321,7 @@ bool Connection::write_int() noexcept
 
 string Connection::debug_info() const
 {
-    SPDLOG_TRACE("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
+    log_trace("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
 
     string out;
 
@@ -342,7 +342,7 @@ string Connection::debug_info() const
 
 void Connection::cb_prepare(ev::prepare& w, int revents)
 {
-    SPDLOG_TRACE("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
+    log_trace("Conn={:p}, {}", reinterpret_cast<const void*>(this), __PRETTY_FUNCTION__);
 
     w.stop();
 
