@@ -91,7 +91,7 @@ bool Client::send(const net::Domain& domain, intrusive_ptr<client::Request>&& re
         return true;
     }
 
-    if (_pools.size() >= _config.max_pools)
+    if (_config.max_pools && _pools.size() >= _config.max_pools)
         return false;
 
     try {
