@@ -24,7 +24,7 @@
 namespace sniper {
 
 template<typename... Args>
-inline void log(FILE* out, string_view level, const char* fmt, const Args&... args)
+inline void _log(FILE* out, string_view level, const char* fmt, const Args&... args)
 {
     fmt::memory_buffer buf;
     fmt::format_to(buf, fmt, args...);
@@ -33,24 +33,36 @@ inline void log(FILE* out, string_view level, const char* fmt, const Args&... ar
     fflush(out);
 }
 
+template<typename... Args>
+inline void log(string_view level, const char* fmt, const Args&... args)
+{
+    _log(stdout, level, fmt, args...);
+}
+
 template<typename T>
-inline void log(FILE* out, string_view level, const T& msg)
+inline void _log(FILE* out, string_view level, const T& msg)
 {
     fmt::print(out, "[{:%Y-%m-%d %H:%M:%S}] [{}] {}\n", fmt::localtime(time(nullptr)), level, msg);
     fflush(out);
+}
+
+template<typename T>
+inline void log(string_view level, const T& msg)
+{
+    _log(stdout, level, msg);
 }
 
 #ifdef SNIPER_TRACE
 template<typename... Args>
 inline void log_trace(const char* fmt, const Args&... args)
 {
-    log(stdout, "trace", fmt, args...);
+    _log(stdout, "trace", fmt, args...);
 }
 
 template<typename T>
 void log_trace(const T& msg)
 {
-    log(stdout, "trace", msg);
+    _log(stdout, "trace", msg);
 }
 #else
 #define log_trace(...) (void)0
@@ -59,49 +71,49 @@ void log_trace(const T& msg)
 template<typename... Args>
 inline void log_info(const char* fmt, const Args&... args)
 {
-    log(stdout, "info", fmt, args...);
+    _log(stdout, "info", fmt, args...);
 }
 
 template<typename... Args>
 inline void log_warn(const char* fmt, const Args&... args)
 {
-    log(stdout, "warning", fmt, args...);
+    _log(stdout, "warning", fmt, args...);
 }
 
 template<typename... Args>
 inline void log_err(const char* fmt, const Args&... args)
 {
-    log(stderr, "error", fmt, args...);
+    _log(stderr, "error", fmt, args...);
 }
 
 template<typename... Args>
 inline void log_crit(const char* fmt, const Args&... args)
 {
-    log(stderr, "critical", fmt, args...);
+    _log(stderr, "critical", fmt, args...);
 }
 
 template<typename T>
 void log_info(const T& msg)
 {
-    log(stdout, "info", msg);
+    _log(stdout, "info", msg);
 }
 
 template<typename T>
 void log_warn(const T& msg)
 {
-    log(stdout, "warning", msg);
+    _log(stdout, "warning", msg);
 }
 
 template<typename T>
 void log_err(const T& msg)
 {
-    log(stderr, "error", msg);
+    _log(stderr, "error", msg);
 }
 
 template<typename T>
 void log_crit(const T& msg)
 {
-    log(stderr, "critical", msg);
+    _log(stderr, "critical", msg);
 }
 
 } // namespace sniper
