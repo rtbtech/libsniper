@@ -17,6 +17,7 @@
 #pragma once
 
 #include <boost/smart_ptr.hpp>
+#include <boost/smart_ptr/atomic_shared_ptr.hpp>
 #include <boost/smart_ptr/intrusive_ptr.hpp>
 #include <boost/smart_ptr/intrusive_ref_counter.hpp>
 #include <boost/smart_ptr/local_shared_ptr.hpp>
@@ -27,6 +28,7 @@
 
 namespace sniper {
 
+using boost::atomic_shared_ptr;
 using boost::intrusive_ptr;
 using boost::local_shared_ptr;
 using boost::make_local_shared;
