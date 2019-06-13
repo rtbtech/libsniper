@@ -8,6 +8,7 @@ set(LIB_HEADERS
     atoi.h
     hex.h
     trim.h
+    join.h
     )
 
 set(LIB_SOURCES
