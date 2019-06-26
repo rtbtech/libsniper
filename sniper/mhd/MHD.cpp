@@ -165,7 +165,7 @@ static int mhd_request_callback(void* cls, struct MHD_Connection* connection, co
     return rc;
 }
 
-MHD::MHD() : port(8080), threads_count(1)
+MHD::MHD()
 {
     /* Linker bug fix
      * libmicrohttpd/src/microhttpd/internal.c:188: undefined reference to `clock_gettime'
@@ -199,7 +199,9 @@ bool MHD::start(const string& path)
     if (host.empty()) {
         d = MHD_start_daemon(MHD_USE_EPOLL_INTERNALLY_LINUX_ONLY | MHD_USE_EPOLL_TURBO, port, nullptr, nullptr,
                              &mhd_request_callback, this, MHD_OPTION_THREAD_POOL_SIZE, (unsigned int)threads_count,
-                             MHD_OPTION_CONNECTION_LIMIT, (unsigned int)200000, MHD_OPTION_END);
+                             MHD_OPTION_CONNECTION_LIMIT, connection_limit, MHD_OPTION_PER_IP_CONNECTION_LIMIT,
+                             per_ip_connection_limit, MHD_OPTION_CONNECTION_TIMEOUT, connection_timeout,
+                             MHD_OPTION_END);
     }
     else {
         struct sockaddr_in sa
@@ -209,8 +211,9 @@ bool MHD::start(const string& path)
         if (inet_pton(AF_INET, host.c_str(), &sa.sin_addr) == 1) {
             d = MHD_start_daemon(MHD_USE_EPOLL_INTERNALLY_LINUX_ONLY | MHD_USE_EPOLL_TURBO, port, nullptr, nullptr,
                                  &mhd_request_callback, this, MHD_OPTION_THREAD_POOL_SIZE, (unsigned int)threads_count,
-                                 MHD_OPTION_CONNECTION_LIMIT, (unsigned int)200000, MHD_OPTION_SOCK_ADDR,
-                                 (sockaddr*)&sa, MHD_OPTION_END);
+                                 MHD_OPTION_CONNECTION_LIMIT, connection_limit, MHD_OPTION_PER_IP_CONNECTION_LIMIT,
+                                 per_ip_connection_limit, MHD_OPTION_CONNECTION_TIMEOUT, connection_timeout,
+                                 MHD_OPTION_SOCK_ADDR, (sockaddr*)&sa, MHD_OPTION_END);
         }
     }
 
@@ -359,6 +362,21 @@ void MHD::set_port(unsigned int p)
 void MHD::set_threads(unsigned int count)
 {
     this->threads_count = count;
+}
+
+void MHD::set_connection_limit(unsigned int num)
+{
+    this->connection_limit = num;
+}
+
+void MHD::set_per_ip_connection_limit(unsigned int num)
+{
+    this->per_ip_connection_limit = num;
+}
+
+void MHD::set_connection_timeout(unsigned int num)
+{
+    this->connection_timeout = num;
 }
 
 bool MHD::parse_qs(const string& qs, map<string, string>& params)

@@ -104,14 +104,21 @@ protected:
     void set_host(const string& host);
     void set_port(unsigned int port);
     void set_threads(unsigned int count);
+    void set_connection_limit(unsigned int num);
+    void set_per_ip_connection_limit(unsigned int num);
+    void set_connection_timeout(unsigned int num);
+
     [[nodiscard]] unsigned int get_threads();
     [[nodiscard]] const string& get_config_path();
 
 private:
     string config_path;
     string host;
-    unsigned int port;
-    unsigned int threads_count;
+    unsigned int port = 8080;
+    unsigned int threads_count = 1;
+    unsigned int connection_limit = 200000;
+    unsigned int per_ip_connection_limit = 0;
+    unsigned int connection_timeout = 10; // seconds
 };
 
 } // namespace sniper::mhd
