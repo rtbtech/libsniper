@@ -126,7 +126,7 @@ ParseResult Request::parse(char* data, size_t size) noexcept
 
             // params
             if (!qs.empty())
-                params = parse_qs(path);
+                params = parse_qs(qs);
         }
         else {
             path = "/";
