@@ -26,7 +26,7 @@ namespace sniper::strings {
 void bin2hex(const unsigned char* src, size_t len, char* dst) noexcept;
 
 // dst size should be at least 1/2 src size
-[[nodiscard]] size_t hex2bin(const char* src, size_t len, unsigned char* dst) noexcept;
+size_t hex2bin(const char* src, size_t len, unsigned char* dst) noexcept;
 
 template<size_t SIZE>
 void bin2hex(const std::array<unsigned char, SIZE>& src, std::array<char, SIZE * 2>& dst) noexcept

@@ -22,55 +22,55 @@
 namespace sniper {
 
 template<typename T>
-inline bool is_string(const T& json, std::string_view str)
+inline bool is_string(const T& json, std::string_view key)
 {
-    return json.HasMember(str) && json[str].IsString() && json[str].GetStringLength();
+    return json.HasMember(key) && json[key].IsString() && json[key].GetStringLength();
 }
 
 template<typename T>
-inline bool is_num(const T& json, std::string_view str)
+inline bool is_num(const T& json, std::string_view key)
 {
-    return json.HasMember(str) && json[str].IsNumber();
+    return json.HasMember(key) && json[key].IsNumber();
 }
 
 template<typename T>
-inline bool is_obj(const T& json, std::string_view str)
+inline bool is_obj(const T& json, std::string_view key)
 {
-    return json.HasMember(str) && json[str].IsObject();
+    return json.HasMember(key) && json[key].IsObject();
 }
 
 template<typename T>
-inline bool is_array(const T& json, std::string_view str)
+inline bool is_array(const T& json, std::string_view key)
 {
-    return json.HasMember(str) && json[str].IsArray();
+    return json.HasMember(key) && json[key].IsArray();
 }
 
 template<typename T>
-inline std::string_view get_string(const T& json, std::string_view str)
+inline std::string_view get_string(const T& json, std::string_view key)
 {
-    return std::string_view(json[str].GetString(), json[str].GetStringLength());
+    return std::string_view(json[key].GetString(), json[key].GetStringLength());
 }
 
 template<typename T>
-inline std::string_view get_string_or_empty(const T& json, std::string_view str)
+inline std::string_view get_string_or_empty(const T& json, std::string_view key)
 {
-    if (is_string(json, str))
-        return get_string(json, str);
+    if (is_string(json, key))
+        return get_string(json, key);
 
     return {};
 }
 
 template<typename T>
-inline int64_t get_int64(const T& json, std::string_view str)
+inline int64_t get_int64(const T& json, std::string_view key)
 {
-    return json[str].GetInt64();
+    return json[key].GetInt64();
 }
 
 template<typename T>
-inline int64_t get_int64(const T& json, std::string_view str, int64_t default_int)
+inline int64_t get_int64(const T& json, std::string_view key, int64_t default_int)
 {
-    if (is_num(json, str))
-        return get_int64(json, str);
+    if (is_num(json, key))
+        return get_int64(json, key);
 
     return default_int;
 }
