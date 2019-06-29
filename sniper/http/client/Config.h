@@ -21,7 +21,7 @@
 
 namespace sniper::http::client {
 
-struct MessageConfig
+struct MessageConfig final
 {
     bool keep_alive = true;
 
@@ -30,7 +30,7 @@ struct MessageConfig
     size_t header_chunk_size = 1024;
 };
 
-struct ConnectionConfig
+struct ConnectionConfig final
 {
     uint32_t recv_buf = 20 * 1024 * 1024;
     uint32_t send_buf = 20 * 1024 * 1024;
@@ -40,7 +40,7 @@ struct ConnectionConfig
     MessageConfig message;
 };
 
-struct PoolConfig
+struct PoolConfig final
 {
     size_t max_conns = 10;
     size_t conns_per_ip = 1;
@@ -48,7 +48,7 @@ struct PoolConfig
     ConnectionConfig connection;
 };
 
-struct Config
+struct Config final
 {
     net::Domain proxy;
     size_t max_pools = 1000;

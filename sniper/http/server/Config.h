@@ -21,14 +21,14 @@
 
 namespace sniper::http::server {
 
-struct MessageConfig
+struct MessageConfig final
 {
     size_t header_max_size = 4 * 1024;
     size_t body_max_size = 128 * 1024;
     size_t header_chunk_size = 1024;
 };
 
-struct ConnectionConfig
+struct ConnectionConfig final
 {
     milliseconds keep_alive_timeout = 1min;
     milliseconds request_read_timeout = 1s;
@@ -36,7 +36,7 @@ struct ConnectionConfig
     MessageConfig message;
 };
 
-struct Config
+struct Config final
 {
     uint32_t recv_buf = 20 * 1024 * 1024;
     uint32_t send_buf = 20 * 1024 * 1024;
