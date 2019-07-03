@@ -90,6 +90,14 @@ bool fill_addr(const std::string& ip, uint16_t port, sockaddr_in& dst)
     return ip_from_str(ip, dst);
 }
 
+void fill_addr(uint32_t ip, uint16_t port, sockaddr_in& dst)
+{
+    memset(&dst, 0, sizeof(dst));
+    dst.sin_family = AF_INET;
+    dst.sin_port = htons(port);
+    dst.sin_addr.s_addr = ip;
+}
+
 bool is_ip(string_view str)
 {
     return (!str.empty() && RE2::PartialMatch(re2::StringPiece(str.data(), str.size()), re_ip));

@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <netinet/in.h>
 #include <sniper/std/string.h>
 #include <sniper/std/tuple.h>
 
@@ -27,7 +28,8 @@ public:
     Peer() = default;
     Peer(const string& ip, uint16_t port);
     Peer(uint32_t ip, uint16_t port);
-    Peer(const tuple<uint32_t, uint16_t>& p);
+    explicit Peer(tuple<uint32_t, uint16_t> p);
+    explicit Peer(const sockaddr_in& sa);
     Peer(const Peer& p);
     Peer(Peer&& p) noexcept;
 

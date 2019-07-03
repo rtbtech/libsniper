@@ -38,6 +38,7 @@ namespace sniper::net {
 [[nodiscard]] bool ip_from_sv(string_view str, uint32_t& dst);
 
 [[nodiscard]] bool fill_addr(const string& ip, uint16_t port, sockaddr_in& dst);
+void fill_addr(uint32_t ip, uint16_t port, sockaddr_in& dst);
 
 [[nodiscard]] bool is_ip(string_view str);
 

@@ -225,11 +225,11 @@ int accept(int server_fd, uint32_t& ip, uint16_t& port)
 
 tuple<int, Peer> accept(int server_fd)
 {
-    uint32_t ip;
-    uint16_t port;
+    uint32_t ip = 0;
+    uint16_t port = 0;
 
     int rc = accept(server_fd, ip, port);
-    return make_tuple(rc, make_tuple(ip, port));
+    return make_tuple(rc, Peer(ip, port));
 }
 
 int connect(int fd, uint32_t ip, uint16_t port)

@@ -37,7 +37,9 @@ Peer::Peer(uint32_t ip, uint16_t port)
     get<uint32_t>(_peer) = ip;
 }
 
-Peer::Peer(const tuple<uint32_t, uint16_t>& p) : Peer(get<uint32_t>(p), get<uint16_t>(p)) {}
+Peer::Peer(tuple<uint32_t, uint16_t> p) : Peer(get<uint32_t>(p), get<uint16_t>(p)) {}
+
+Peer::Peer(const sockaddr_in& sa) : Peer((uint32_t)sa.sin_addr.s_addr, ntohs(sa.sin_port)) {}
 
 Peer::Peer(const Peer& p)
 {
