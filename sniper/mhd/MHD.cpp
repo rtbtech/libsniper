@@ -109,18 +109,8 @@ static int mhd_request_callback(void* cls, struct MHD_Connection* connection, co
     /* Complete */
     *ptr = nullptr;
     MHD::Response resp;
-
-
-    if (req->headers.count("SNIPER_TEST")) {
-        /* test request */
-        resp.code = 204;
-        resp.headers["SNIPER_TEST"] = "TEST_OK";
-    }
-    else {
-        MHD* mhd_server = (MHD*)cls;
-        mhd_server->run(MHD_get_thread_number(connection), *req, resp);
-    }
-
+    MHD* mhd_server = (MHD*)cls;
+    mhd_server->run(MHD_get_thread_number(connection), *req, resp);
 
     delete req;
     int rc = MHD_NO;
