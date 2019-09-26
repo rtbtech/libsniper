@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <sniper/crypto/asn1.h>
+#include <sniper/crypto/openssl.h>
 #include <sniper/std/filesystem.h>
 #include <sniper/std/string.h>
 
@@ -26,15 +28,20 @@ class Key final
 public:
     explicit Key(const fs::path& p);
 
-    string_view hex_addr() const noexcept;
-    string_view hex_pubkey() const noexcept;
-    string_view raw_privkey() const noexcept;
+    [[nodiscard]] string_view hex_addr() const noexcept;
+    [[nodiscard]] string_view hex_pubkey() const noexcept;
+    [[nodiscard]] string_view bin_pubkey() const noexcept;
+
+    [[nodiscard]] bool sign(string_view data, unsigned char* dst, size_t& len) const noexcept;
 
 private:
     string _hex_addr;
     string _hex_pubkey;
+    string _bin_pubkey;
     string _bin_privkey_full;
     string _bin_privkey_min;
+    optional<crypto::Curve> _privkey_type;
+    crypto::evp_key_ptr _evp_pkey{nullptr, &EVP_PKEY_free};
 };
 
 } // namespace sniper::mh

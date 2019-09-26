@@ -41,4 +41,24 @@ bool openssl_verify(string_view sig, string_view pubkey, string_view data)
            == 1;
 }
 
+bool openssl_sign(const evp_key_ptr& evp_key, string_view data, unsigned char* dst, size_t& len)
+{
+    auto* ec_key = EVP_PKEY_get0_EC_KEY(evp_key.get());
+    if (!ec_key)
+        return false;
+
+    if (len < static_cast<size_t>(ECDSA_size(ec_key)))
+        return false;
+
+    crypto::digest_t digest;
+    if (!crypto::digest_calc(data, digest))
+        return false;
+
+    unsigned int dst_len = len;
+    int rc = ECDSA_sign(0, get<0>(digest).data(), get<1>(digest), dst, &dst_len, ec_key);
+    len = dst_len;
+
+    return rc;
+}
+
 } // namespace sniper::crypto

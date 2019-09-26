@@ -33,10 +33,21 @@ using evp_key_ptr = unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)>;
  * Returns: unique_ptr to EVP_PKEY
  * In:      raw public key in der format
  */
-inline evp_key_ptr openssl_load_public_key(string_view raw) noexcept
+[[nodiscard]] inline evp_key_ptr openssl_load_public_key(string_view raw) noexcept
 {
     auto* data = reinterpret_cast<const unsigned char*>(raw.data());
     return evp_key_ptr(d2i_PUBKEY(nullptr, &data, raw.size()), &EVP_PKEY_free);
+}
+
+/* Load private key
+ *
+ * Returns: unique_ptr to EVP_PKEY
+ * In:      raw private key
+ */
+[[nodiscard]] inline evp_key_ptr openssl_load_private_key(string_view raw) noexcept
+{
+    auto* data = reinterpret_cast<const unsigned char*>(raw.data());
+    return evp_key_ptr(d2i_AutoPrivateKey(nullptr, &data, raw.size()), &EVP_PKEY_free);
 }
 
 /* Veryfy signature of data
@@ -46,6 +57,16 @@ inline evp_key_ptr openssl_load_public_key(string_view raw) noexcept
  *          pubkey: raw public key in DER format
  *          data:   bytes array
  */
-bool openssl_verify(string_view sig, string_view pubkey, string_view data);
+[[nodiscard]] bool openssl_verify(string_view sig, string_view pubkey, string_view data);
+
+/* Sign data
+ *
+ * Returns: true if sign ok, false otherwise
+ * In:      evp_key openssl private key
+ *          data:   bytes array
+ * Out:     sig:    raw ECDSA signature in DER format
+ *          len:    length of signature
+ */
+[[nodiscard]] bool openssl_sign(const evp_key_ptr& evp_key, string_view data, unsigned char* sig, size_t& len);
 
 } // namespace sniper::crypto
