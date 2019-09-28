@@ -19,8 +19,8 @@
 
 #include <openssl/ripemd.h>
 #include <openssl/x509.h>
-#include <sniper/crypto/secp.h>
 #include <sniper/file/load.h>
+#include <sniper/log/log.h>
 #include <sniper/std/check.h>
 #include <sniper/strings/hex.h>
 #include <sniper/strings/trim.h>
@@ -82,17 +82,13 @@ string build_pubkey(const crypto::evp_key_ptr& evp_key)
 
 Key::Key(const fs::path& p)
 {
-    // p = empty if sign disabled
-    if (p.empty())
-        return;
-
     if (auto hex_key = file::load_file_to_string(p); !hex_key.empty())
-        strings::hex2bin_append(strings::trim(hex_key), _bin_privkey_full);
+        strings::hex2bin_append(strings::trim(hex_key), _bin_privkey);
 
-    check(_bin_privkey_full.size() >= 39, "Key: private key invalid size");
+    check(_bin_privkey.size() >= 39, "Key: private key invalid size");
 
     // load openssl private key
-    _evp_pkey = crypto::openssl_load_private_key(_bin_privkey_full);
+    _evp_pkey = crypto::openssl_load_private_key(_bin_privkey);
     check(_evp_pkey, "Key: openssl error load private key");
 
     // create pubkey from privkey
@@ -100,8 +96,8 @@ Key::Key(const fs::path& p)
     check(!_bin_pubkey.empty(), "Key: openssl error create pubkey");
 
     // check key curve
-    _privkey_type = crypto::parse_curve_oid(_bin_pubkey);
-    check(_privkey_type, "Key: private key should use secp256k1 or prime256v1 curve");
+    auto privkey_type = crypto::parse_curve_oid(_bin_pubkey);
+    check(privkey_type, "Key: private key should use secp256k1 or prime256v1 curve");
 
     // build hex pubkey
     _hex_pubkey = "0x";
@@ -113,19 +109,15 @@ Key::Key(const fs::path& p)
     check(build_address(_bin_pubkey, addr), "Key: cannot build address");
     strings::bin2hex_append(addr.data(), addr.size(), _hex_addr);
 
-    if (_privkey_type == crypto::Curve::secp256k1) {
-        _bin_privkey_min = _bin_privkey_full.substr(8, 32);
-        check(!_bin_privkey_min.empty(), "Key: empty private key");
-        check(crypto::check_priv_key(_bin_privkey_min), "Key: wrong private key");
-    }
+    if (privkey_type == crypto::Curve::secp256k1)
+        log_info("Private key: secp256k1 curve");
+    else
+        log_info("Private key: prime256v1 (secp256r1) curve");
 }
 
 bool Key::sign(string_view data, unsigned char* dst, size_t& len) const noexcept
 {
-    if (_privkey_type == crypto::Curve::secp256k1)
-        return crypto::secp256k1_sign(_bin_privkey_min, data, dst, len);
-    else
-        return crypto::openssl_sign(_evp_pkey, data, dst, len);
+    return crypto::openssl_sign(_evp_pkey, data, dst, len);
 }
 
 string_view Key::hex_addr() const noexcept

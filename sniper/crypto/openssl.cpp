@@ -54,11 +54,11 @@ bool openssl_sign(const evp_key_ptr& evp_key, string_view data, unsigned char* d
     if (!crypto::digest_calc(data, digest))
         return false;
 
-    unsigned int dst_len = len;
+    unsigned int dst_len = 0;
     int rc = ECDSA_sign(0, get<0>(digest).data(), get<1>(digest), dst, &dst_len, ec_key);
     len = dst_len;
 
-    return rc;
+    return rc == 1;
 }
 
 } // namespace sniper::crypto

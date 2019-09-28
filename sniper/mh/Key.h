@@ -38,9 +38,7 @@ private:
     string _hex_addr;
     string _hex_pubkey;
     string _bin_pubkey;
-    string _bin_privkey_full;
-    string _bin_privkey_min;
-    optional<crypto::Curve> _privkey_type;
+    string _bin_privkey;
     crypto::evp_key_ptr _evp_pkey{nullptr, &EVP_PKEY_free};
 };
 
