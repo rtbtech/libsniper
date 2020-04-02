@@ -19,6 +19,7 @@
 #include <fmt/chrono.h>
 #include <fmt/format.h>
 #include <fmt/time.h>
+#include <sniper/std/chrono.h>
 #include <sniper/std/string.h>
 
 namespace sniper {
@@ -26,9 +27,13 @@ namespace sniper {
 template<typename... Args>
 inline void _log(FILE* out, string_view level, const char* fmt, const Args&... args)
 {
+    auto tp = high_resolution_clock::now();
+    milliseconds ms = duration_cast<milliseconds>(tp.time_since_epoch());
+    seconds s = duration_cast<seconds>(ms);
+
     fmt::memory_buffer buf;
     fmt::format_to(buf, fmt, args...);
-    fmt::print(out, "[{:%Y-%m-%d %H:%M:%S}] [{}] {}\n", fmt::localtime(time(nullptr)), level,
+    fmt::print(out, "[{:%Y-%m-%d %H:%M:%S}.{}] [{}] {}\n", fmt::localtime(s.count()), ms.count() % 1000, level,
                string_view(buf.data(), buf.size()));
     fflush(out);
 }
@@ -42,7 +47,11 @@ inline void log(string_view level, const char* fmt, const Args&... args)
 template<typename T>
 inline void _log(FILE* out, string_view level, const T& msg)
 {
-    fmt::print(out, "[{:%Y-%m-%d %H:%M:%S}] [{}] {}\n", fmt::localtime(time(nullptr)), level, msg);
+    auto tp = high_resolution_clock::now();
+    milliseconds ms = duration_cast<milliseconds>(tp.time_since_epoch());
+    seconds s = duration_cast<seconds>(ms);
+
+    fmt::print(out, "[{:%Y-%m-%d %H:%M:%S}.{}] [{}] {}\n", fmt::localtime(s.count()), ms.count() % 1000, level, msg);
     fflush(out);
 }
 
