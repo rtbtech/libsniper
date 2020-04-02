@@ -67,8 +67,10 @@ void Pool::send(intrusive_ptr<Request>&& req)
     log_trace(__PRETTY_FUNCTION__);
 
     _out.emplace_back(std::move(req));
-    if (!_w.is_active())
+    if (!_w.is_active()) {
         _w.start();
+        _w.feed_event(0);
+    }
 }
 
 void Pool::cb_prepare(ev::prepare& w, int revents)
