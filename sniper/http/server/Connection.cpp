@@ -145,8 +145,10 @@ void Connection::cb_read(ev::io& w, int revents) noexcept
                         resp->set_minor_version(_in->minor_version());
                         _user_cb.emplace_back(_in, resp);
 
-                        if (!_w_prepare.is_active())
+                        if (!_w_prepare.is_active()) {
                             _w_prepare.start();
+                            _w_prepare.feed_event(0);
+                        }
                     }
                 }
                 catch (...) {
