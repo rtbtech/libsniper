@@ -106,4 +106,13 @@ inline intrusive_ptr<Request> make_request()
     return RequestCache::get_intrusive();
 }
 
+inline intrusive_ptr<Request> make_request(Method method, const net::Domain& domain)
+{
+    auto req = RequestCache::get_intrusive();
+    req->method = method;
+    req->url.set_domain(domain);
+
+    return req;
+}
+
 } // namespace sniper::http::client

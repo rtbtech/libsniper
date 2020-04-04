@@ -33,13 +33,18 @@ public:
     explicit Server(event::loop_ptr loop, server::Config config = {});
     ~Server() noexcept;
 
-    [[nodiscard]] bool bind(uint16_t port) noexcept;
-    [[nodiscard]] bool bind(const string& ip, uint16_t port) noexcept;
+    [[nodiscard]] bool bind(uint16_t port, bool ssl = false) noexcept;
+    [[nodiscard]] bool bind(const string& ip, uint16_t port, bool ssl = false) noexcept;
 
     template<typename T>
     void set_cb_request(T&& cb);
 
 private:
+    struct ServerIO : public ev::io
+    {
+        bool ssl = false;
+    };
+
     [[nodiscard]] intrusive_ptr<server::Connection> get_conn();
     void cb_accept(ev::io& w, [[maybe_unused]] int revents) noexcept;
     void cb_clean(ev::timer& w, [[maybe_unused]] int revents) noexcept;
@@ -52,7 +57,7 @@ private:
         _cb_request;
 
     ev::timer _w_clean;
-    list<ev::io> _w_accept;
+    list<unique_ptr<ServerIO>> _w_accept;
     list<intrusive_ptr<server::Connection>> _conns;
 
     // use only refcount=1 pointers from this list

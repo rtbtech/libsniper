@@ -58,7 +58,7 @@ ConnectionStatus Connection::status() const noexcept
     return _status;
 }
 
-bool Connection::accept(int fd, net::Peer peer) noexcept
+bool Connection::accept(int fd, net::Peer peer, bool ssl) noexcept
 {
     if (fd <= 0 || _status != ConnectionStatus::Closed)
         return false;

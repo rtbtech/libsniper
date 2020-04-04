@@ -39,21 +39,21 @@ Server::Server(event::loop_ptr loop, server::Config config) : _loop(std::move(lo
 Server::~Server() noexcept
 {
     for (auto& w : _w_accept)
-        if (w.is_active()) {
-            w.stop();
-            ::close(w.fd);
+        if (w->is_active()) {
+            w->stop();
+            ::close(w->fd);
         }
 
     for (auto& conn : _conns)
         conn->disconnect();
 }
 
-bool Server::bind(uint16_t port) noexcept
+bool Server::bind(uint16_t port, bool ssl) noexcept
 {
-    return bind("", port);
+    return bind("", port, ssl);
 }
 
-bool Server::bind(const string& ip, uint16_t port) noexcept
+bool Server::bind(const string& ip, uint16_t port, bool ssl) noexcept
 {
     if (!port)
         return false;
@@ -90,9 +90,12 @@ bool Server::bind(const string& ip, uint16_t port) noexcept
 
 
     try {
-        auto& w = _w_accept.emplace_back(*_loop);
-        w.set<Server, &Server::cb_accept>(this);
-        w.start(fd, ev::READ);
+        auto w = make_unique<ServerIO>();
+        w->ssl = ssl;
+        w->set(*_loop);
+        w->set<Server, &Server::cb_accept>(this);
+        w->start(fd, ev::READ);
+        _w_accept.emplace_back(std::move(w));
     }
     catch (...) {
         // OOM guard
@@ -138,6 +141,8 @@ intrusive_ptr<server::Connection> Server::get_conn()
 
 void Server::cb_accept(ev::io& w, int revents) noexcept
 {
+    auto* server_w = static_cast<ServerIO*>(&w);
+
     while (true) {
         if (auto [fd, peer] = net::socket::tcp::accept(w.fd); fd >= 0) {
             if (!net::socket::tcp::set_no_delay(fd) || !net::socket::set_non_blocking(fd)
@@ -147,7 +152,7 @@ void Server::cb_accept(ev::io& w, int revents) noexcept
             }
 
             if (auto conn = get_conn(); conn) {
-                if (conn->accept(fd, peer))
+                if (conn->accept(fd, peer, server_w->ssl))
                     continue;
 
                 conn->disconnect();

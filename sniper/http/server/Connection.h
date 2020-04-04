@@ -61,7 +61,7 @@ public:
 private:
     friend class sniper::http::Server;
 
-    [[nodiscard]] bool accept(int fd, net::Peer peer) noexcept;
+    [[nodiscard]] bool accept(int fd, net::Peer peer, bool ssl) noexcept;
 
     void cb_prepare(ev::prepare& w, [[maybe_unused]] int revents);
     void cb_read(ev::io& w, [[maybe_unused]] int revents) noexcept;
