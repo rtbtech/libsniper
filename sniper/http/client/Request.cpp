@@ -134,6 +134,8 @@ void Request::clear()
 
     close_reason.clear();
 
+    wg.reset();
+
     _iov.clear();
     clear_tuple(_first_headers);
     _headers.clear();

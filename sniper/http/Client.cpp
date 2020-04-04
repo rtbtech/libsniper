@@ -17,7 +17,6 @@
  * limitations under the License.
  */
 
-//#define SNIPER_TRACE
 #include <sniper/log/log.h>
 #include <sniper/std/check.h>
 #include "Client.h"

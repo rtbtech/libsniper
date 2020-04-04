@@ -7,6 +7,7 @@ set(LIB_HEADERS
     Client.h
     SyncClient.h
     utils.h
+    Wait.h
     server/Config.h
     server/Connection.h
     server/Request.h
@@ -17,6 +18,7 @@ set(LIB_HEADERS
     client/Response.h
     client/Config.h
     client/Pool.h
+    wait/Group.h
     )
 
 set(LIB_SOURCES
@@ -24,6 +26,7 @@ set(LIB_SOURCES
     Client.cpp
     SyncClient.cpp
     utils.cpp
+    Wait.cpp
     server/Connection.cpp
     server/Request.cpp
     server/Response.cpp
@@ -32,6 +35,7 @@ set(LIB_SOURCES
     client/Request.cpp
     client/Response.cpp
     client/Pool.cpp
+    wait/Group.cpp
     )
 
 #Library

@@ -29,11 +29,13 @@
 namespace sniper {
 
 using boost::atomic_shared_ptr;
+using boost::dynamic_pointer_cast;
 using boost::intrusive_ptr;
 using boost::local_shared_ptr;
 using boost::make_local_shared;
 using boost::make_shared;
 using boost::shared_ptr; // use boost::shared_ptr instead of std::shared_ptr
+using boost::static_pointer_cast;
 using std::make_unique;
 using std::unique_ptr;
 
@@ -62,3 +64,13 @@ inline intrusive_ptr<T> make_intrusive(_Args&&... __args)
 }
 
 } // namespace sniper
+
+namespace std {
+
+template<typename T>
+struct hash<sniper::intrusive_ptr<T>>
+{
+    size_t operator()(const sniper::intrusive_ptr<T>& k) const { return std::hash<T*>()(k.get()); }
+};
+
+} // namespace std
