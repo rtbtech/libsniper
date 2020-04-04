@@ -52,9 +52,13 @@ inline intrusive_ptr<Group> make_group()
 }
 
 template<class T>
-inline intrusive_ptr<T> make_group()
+inline intrusive_ptr<T> make_group(unsigned count, milliseconds timeout = 0ms)
 {
-    return cache::STDCache<T>::get_intrusive();
+    auto ptr = cache::STDCache<T>::get_intrusive();
+    ptr->count = count;
+    ptr->timeout = timeout;
+
+    return ptr;
 }
 
 } // namespace sniper::http::wait
