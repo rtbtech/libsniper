@@ -42,7 +42,7 @@ Wait::~Wait() noexcept
         wg.second->stop();
 }
 
-void Wait::add(intrusive_ptr<wait::Group>&& wg)
+void Wait::add(intrusive_ptr<wait::Group> wg)
 {
     log_trace(__PRETTY_FUNCTION__);
 

@@ -30,7 +30,7 @@ public:
     explicit Wait(event::loop_ptr loop);
     virtual ~Wait() noexcept;
 
-    void add(intrusive_ptr<wait::Group>&& wg);
+    void add(intrusive_ptr<wait::Group> wg);
     void done(const intrusive_ptr<wait::Group>& wg);
 
     template<typename T>

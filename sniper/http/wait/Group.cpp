@@ -26,7 +26,11 @@ void Group::clear() noexcept
     timeout = 0ms;
     count = 0;
     _is_timeout = false;
+
+    release(); // call clear from derived class
 }
+
+void Group::release() noexcept {}
 
 bool Group::is_timeout() const noexcept
 {

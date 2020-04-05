@@ -33,6 +33,7 @@ public:
     virtual ~Group() noexcept = default;
 
     void clear() noexcept;
+    virtual void release() noexcept; // clear method for derived class
     void set_timeout() noexcept;
 
     [[nodiscard]] bool is_timeout() const noexcept;
