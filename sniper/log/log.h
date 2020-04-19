@@ -18,7 +18,6 @@
 
 #include <fmt/chrono.h>
 #include <fmt/format.h>
-#include <fmt/time.h>
 #include <sniper/std/chrono.h>
 #include <sniper/std/string.h>
 
