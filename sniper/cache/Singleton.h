@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 - 2019, MetaHash, Oleg Romanenko (oleg@romanenko.ro)
+ * Copyright (c) 2018 - 2020, MetaHash, RTBtech, Oleg Romanenko (oleg@romanenko.ro)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ template<class T>
 class Singleton final
 {
 public:
-    static T& get() { return instance().item; }
+    [[nodiscard]] static T& get() { return instance().item; }
 
     Singleton(const Singleton&) = delete;
     Singleton(const Singleton&&) = delete;
@@ -31,7 +31,7 @@ public:
     Singleton& operator=(const Singleton&&) = delete;
 
 private:
-    static Singleton& instance()
+    [[nodiscard]] static Singleton& instance()
     {
         static Singleton<T> s;
         return s;
@@ -48,7 +48,7 @@ template<class T>
 class ThreadLocalSingleton final
 {
 public:
-    static T& get() { return instance().item; }
+    [[nodiscard]] static T& get() { return instance().item; }
 
     ThreadLocalSingleton(const ThreadLocalSingleton&) = delete;
     ThreadLocalSingleton(const ThreadLocalSingleton&&) = delete;
@@ -57,7 +57,7 @@ public:
     ThreadLocalSingleton& operator=(const ThreadLocalSingleton&&) = delete;
 
 private:
-    static ThreadLocalSingleton& instance()
+    [[nodiscard]] static ThreadLocalSingleton& instance()
     {
         static thread_local ThreadLocalSingleton<T> s;
         return s;

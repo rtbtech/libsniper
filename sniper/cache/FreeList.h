@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 - 2019, MetaHash, Oleg Romanenko (oleg@romanenko.ro)
+ * Copyright (c) 2018 - 2020, MetaHash, RTBtech, Oleg Romanenko (oleg@romanenko.ro)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,54 +16,59 @@
 
 #pragma once
 
+#include <new>
 #include <utility>
 #include <vector>
 
 namespace sniper::cache {
 
 template<class T, unsigned MaxSize = 100>
-class FreeList
+class FreeList final
 {
 public:
-    FreeList() { free_list.reserve(MaxSize); }
+    FreeList() noexcept
+    {
+        // OOM guard
+        try {
+            free_list.reserve(MaxSize);
+        }
+        catch (...) {
+            free_list.clear();
+        }
+    }
 
-    ~FreeList()
+    ~FreeList() noexcept
     {
         for (auto* e : free_list)
             delete e;
     }
 
     template<typename... _Args>
-    T* pop(_Args&&... __args)
+    [[nodiscard]] T* pop(_Args&&... __args) noexcept
     {
         T* e = nullptr;
         if (free_list.empty()) {
-            e = new T(std::forward<_Args>(__args)...);
+            e = new (std::nothrow) T(std::forward<_Args>(__args)...);
         }
         else {
             e = free_list.back();
             free_list.pop_back();
         }
 
-//        _inuse++;
         return e;
     }
 
-    void push(T* e)
+    void push(T* e) noexcept
     {
-        if (free_list.size() >= MaxSize)
+        if (free_list.size() >= free_list.capacity())
             delete e;
         else
             free_list.push_back(e);
-
-//        if (_inuse)
-//            _inuse--;
     }
 
-    size_t size() const { return free_list.size(); }
-    size_t count_inuse() const { return _inuse; }
+    [[nodiscard]] size_t size() const noexcept { return free_list.size(); }
 
-    void clear()
+    void clear() noexcept
     {
         for (auto* e : free_list)
             delete e;
@@ -72,19 +77,27 @@ public:
     }
 
 private:
-    size_t _inuse = 0;
     std::vector<T*> free_list;
 };
 
 
 template<class T, unsigned N, unsigned MaxSize = 100>
-class FreeListVector
+class FreeListVector final
 {
 public:
-    FreeListVector() { free_list_v.resize(N); }
+    FreeListVector() noexcept
+    {
+        // OOM guard
+        try {
+            free_list_v.resize(N);
+        }
+        catch (...) {
+            free_list_v.clear();
+        }
+    }
 
     template<typename... _Args>
-    T* pop(size_t index, _Args&&... __args)
+    [[nodiscard]] T* pop(size_t index, _Args&&... __args) noexcept
     {
         if (free_list_v[index].size())
             return free_list_v[index].pop(std::forward<_Args>(__args)...);
@@ -97,11 +110,11 @@ public:
         return free_list_v[index].pop(std::forward<_Args>(__args)...);
     }
 
-    void push(size_t index, T* e) { free_list_v[index].push(e); }
+    void push(size_t index, T* e) noexcept { free_list_v[index].push(e); }
 
-    size_t size() const { return free_list_v.size(); }
+    [[nodiscard]] size_t size() const noexcept { return free_list_v.size(); }
 
-    void clear()
+    void clear() noexcept
     {
         for (auto& f : free_list_v)
             f.clear();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 - 2019, MetaHash, Oleg Romanenko (oleg@romanenko.ro)
+ * Copyright (c) 2018 - 2020, MetaHash, RTBtech, Oleg Romanenko (oleg@romanenko.ro)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,10 +29,9 @@ public:
 
     _cache() = default;
 
-    T* get();
-    void clear();
-    size_t size() const;
-    size_t count_inuse() const;
+    void clear() noexcept;
+    [[nodiscard]] T* get() noexcept;
+    [[nodiscard]] size_t size() const noexcept;
 
     _cache(const _cache&) = delete;
     _cache(_cache&&) = delete;
@@ -48,7 +47,7 @@ class _simple_cache final : public _cache<T, MaxSize>
 {
 public:
     _simple_cache() = default;
-    void release(T* ptr);
+    void release(T* ptr) noexcept;
 
     _simple_cache(const _simple_cache&) = delete;
     _simple_cache(_simple_cache&&) = delete;
@@ -61,7 +60,7 @@ class _std_cache final : public _cache<T, MaxSize>
 {
 public:
     _std_cache() = default;
-    void release(T* ptr);
+    void release(T* ptr) noexcept;
 
     _std_cache(const _std_cache&) = delete;
     _std_cache(_std_cache&&) = delete;
@@ -74,7 +73,7 @@ class _proto_cache final : public _cache<T, MaxSize>
 {
 public:
     _proto_cache() = default;
-    void release(T* ptr);
+    void release(T* ptr) noexcept;
 
     _proto_cache(const _proto_cache&) = delete;
     _proto_cache(_proto_cache&&) = delete;
@@ -85,38 +84,32 @@ public:
 // ----------------------------------------------------------------------------
 
 template<class T, unsigned int MaxSize>
-inline T* _cache<T, MaxSize>::get()
+inline T* _cache<T, MaxSize>::get() noexcept
 {
     return _free_list.pop();
 }
 
 template<class T, unsigned int MaxSize>
-inline void _cache<T, MaxSize>::clear()
+inline void _cache<T, MaxSize>::clear() noexcept
 {
     _free_list.clear();
 }
 
 template<class T, unsigned int MaxSize>
-inline size_t _cache<T, MaxSize>::size() const
+inline size_t _cache<T, MaxSize>::size() const noexcept
 {
     return _free_list.size();
 }
 
 template<class T, unsigned int MaxSize>
-inline size_t _cache<T, MaxSize>::count_inuse() const
-{
-    return _free_list.count_inuse();
-}
-
-template<class T, unsigned int MaxSize>
-inline void _simple_cache<T, MaxSize>::release(T* ptr)
+inline void _simple_cache<T, MaxSize>::release(T* ptr) noexcept
 {
     if (ptr)
         _cache<T, MaxSize>::_free_list.push(ptr);
 }
 
 template<class T, unsigned int MaxSize>
-inline void _std_cache<T, MaxSize>::release(T* ptr)
+inline void _std_cache<T, MaxSize>::release(T* ptr) noexcept
 {
     if (ptr) {
         ptr->clear();
@@ -125,7 +118,7 @@ inline void _std_cache<T, MaxSize>::release(T* ptr)
 }
 
 template<class T, unsigned int MaxSize>
-inline void _proto_cache<T, MaxSize>::release(T* ptr)
+inline void _proto_cache<T, MaxSize>::release(T* ptr) noexcept
 {
     if (ptr) {
         ptr->Clear();
