@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <sniper/cache/Cache.h>
 #include <sniper/pico/common.h>
 #include <sniper/std/boost_vector.h>
 
@@ -40,5 +41,6 @@ struct Request final
     small_vector<pair_sv, MAX_PARAMS> params;
 };
 
+using RequestCache = cache::STDCache<pico::Request>;
 
 } // namespace sniper::pico

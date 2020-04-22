@@ -144,6 +144,9 @@ private:
 };
 
 using StringCache = ArrayCache<std::string, 100>;
-using UniqueString = StringCache::unique;
+using String = ArrayCache<std::string, 100>;
+
+template<typename T, unsigned MaxSize = 100>
+using Vector = ArrayCache<std::vector<T>, MaxSize>;
 
 } // namespace sniper::cache
