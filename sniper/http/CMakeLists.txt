@@ -33,7 +33,7 @@ set(LIB_SRC
     client/Pool.cpp
     wait/Group.h
     wait/Group.cpp
-        server2/ServerInt.cpp server2/ServerInt.h)
+    )
 
 #Library
 add_library(sniper_${LIB} STATIC ${LIB_SRC})
