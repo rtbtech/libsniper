@@ -13,8 +13,6 @@ set(LIB_SRC
     utils.cpp
     Wait.h
     Wait.cpp
-    Server2.h
-    Server2.cpp
     server/Config.h
     server/Connection.h
     server/Connection.cpp
@@ -24,16 +22,6 @@ set(LIB_SRC
     server/Response.cpp
     server/Status.h
     server/Status.cpp
-    server2/Connection.h
-    server2/Connection.cpp
-    server2/Request.h
-    server2/Request.cpp
-    server2/Response.h
-    server2/Response.cpp
-    server2/Pool.h
-    server2/Pool.cpp
-    server2/ServerInt.h
-    server2/ServerInt.cpp
     client/Connection.h
     client/Connection.cpp
     client/Request.h
