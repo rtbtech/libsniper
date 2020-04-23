@@ -20,7 +20,6 @@
 #include <cstring>
 #include <errno.h>
 #include <fcntl.h>
-#include <linux/tcp.h>
 #include <netinet/in.h>
 #include <sniper/net/ip.h>
 #include <stdexcept>
@@ -30,6 +29,12 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include "socket.h"
+
+#ifdef _GNU_SOURCE
+#include <linux/tcp.h>
+#else
+#include <netinet/tcp.h>
+#endif
 
 namespace sniper::net::socket {
 
@@ -67,7 +72,12 @@ bool set_reuse_addr_and_port(int fd)
         return false;
 
     int enable = 1;
+
+#ifdef _GNU_SOURCE
     return setsockopt(fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &enable, sizeof(enable)) == 0;
+#else
+    return setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable)) == 0;
+#endif
 }
 
 bool bind(int fd, const string& ip, uint16_t port)
@@ -119,6 +129,7 @@ bool set_no_delay(int fd)
     return setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &enable, sizeof(enable)) == 0;
 }
 
+#ifdef _GNU_SOURCE
 bool get_rtt(int fd, uint32_t& rtt)
 {
     if (fd < 0)
@@ -133,6 +144,7 @@ bool get_rtt(int fd, uint32_t& rtt)
     rtt = ti.tcpi_rtt;
     return true;
 }
+#endif
 
 bool set_mss(int fd, uint16_t mss)
 {
@@ -151,6 +163,7 @@ bool get_mss(int fd, uint16_t& mss)
     return getsockopt(fd, IPPROTO_TCP, TCP_MAXSEG, &mss, &mss_size) == 0;
 }
 
+#ifdef _GNU_SOURCE
 bool set_enable_cork(int fd)
 {
     if (fd < 0)
@@ -168,6 +181,7 @@ bool set_disable_cork(int fd)
     int enable = 0;
     return setsockopt(fd, IPPROTO_TCP, TCP_CORK, &enable, sizeof(enable)) == 0;
 }
+#endif
 
 bool set_recv_buf(int fd, uint32_t size)
 {

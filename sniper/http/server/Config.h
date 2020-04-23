@@ -38,8 +38,8 @@ struct ConnectionConfig final
 
 struct Config final
 {
-    uint32_t recv_buf = 20 * 1024 * 1024;
-    uint32_t send_buf = 20 * 1024 * 1024;
+    uint32_t recv_buf = 1024 * 1024;
+    uint32_t send_buf = 1024 * 1024;
 
     int backlog = 10000;
     size_t max_conns = 10000;

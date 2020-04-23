@@ -42,15 +42,18 @@ namespace tcp {
 [[nodiscard]] int create();
 
 [[nodiscard]] bool set_no_delay(int fd);
-[[nodiscard]] bool set_enable_cork(int fd);
-[[nodiscard]] bool set_disable_cork(int fd);
 [[nodiscard]] bool set_recv_buf(int fd, uint32_t size);
 [[nodiscard]] bool set_send_buf(int fd, uint32_t size);
 [[nodiscard]] bool get_recv_buf(int fd, uint32_t& size);
 [[nodiscard]] bool get_send_buf(int fd, uint32_t& size);
 [[nodiscard]] bool set_mss(int fd, uint16_t mss);
 [[nodiscard]] bool get_mss(int fd, uint16_t& mss);
+
+#ifdef _GNU_SOURCE
+[[nodiscard]] bool set_enable_cork(int fd);
+[[nodiscard]] bool set_disable_cork(int fd);
 [[nodiscard]] bool get_rtt(int fd, uint32_t& rtt);
+#endif
 
 [[nodiscard]] int accept(int server_fd, uint32_t& ip, uint16_t& port);
 [[nodiscard]] tuple<int, Peer> accept(int server_fd);

@@ -27,13 +27,13 @@ struct Request;
 
 struct Pool final : public intrusive_unsafe_ref_counter<Pool>
 {
-    ConnectionPtr get() noexcept;
+    intrusive_ptr<Connection> get() noexcept;
     void detach(Connection* conn) noexcept;
     void close() noexcept;
 
-    unordered_map<Connection*, ConnectionPtr> _conns;
+    unordered_map<Connection*, intrusive_ptr<Connection>> _conns;
 
-    function<void(const ConnectionPtr&, const RequestPtr&)> _cb;
+    function<void(const intrusive_ptr<Connection>&, const intrusive_ptr<Request>&)> _cb;
 };
 
 } // namespace sniper::http::server2

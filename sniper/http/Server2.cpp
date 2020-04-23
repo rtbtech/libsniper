@@ -18,51 +18,9 @@
 #include <sniper/net/socket.h>
 #include <sniper/std/check.h>
 #include "Server2.h"
+#include "server2/ServerInt.h"
 
 namespace sniper::http {
-
-namespace {
-
-bool set_no_delay(int fd) noexcept
-{
-    return net::socket::tcp::set_no_delay(fd) && net::socket::set_non_blocking(fd) && net::socket::set_keep_alive(fd);
-}
-
-int create_socket(const string& ip, uint16_t port, const server::Config& config) noexcept
-{
-    int fd = net::socket::tcp::create();
-    if (fd < 0)
-        return -1;
-
-    if (!set_no_delay(fd) || !net::socket::set_reuse_addr_and_port(fd)) {
-        ::close(fd);
-        return -1;
-    }
-
-    if (config.recv_buf && !net::socket::tcp::set_recv_buf(fd, config.recv_buf)) {
-        ::close(fd);
-        return -1;
-    }
-
-    if (config.send_buf && !net::socket::tcp::set_send_buf(fd, config.send_buf)) {
-        ::close(fd);
-        return -1;
-    }
-
-    if (!net::socket::bind(fd, ip, port)) {
-        ::close(fd);
-        return -1;
-    }
-
-    if (!net::socket::tcp::listen(fd, config.backlog)) {
-        ::close(fd);
-        return -1;
-    }
-
-    return fd;
-}
-
-} // namespace
 
 Server2::Server2(event::loop_ptr loop, server::Config config) :
     _loop(std::move(loop)), _config(config), _pool(make_intrusive<server2::Pool>())
@@ -86,7 +44,7 @@ bool Server2::bind(uint16_t port, bool ssl) noexcept
 
 bool Server2::bind(const string& ip, uint16_t port, bool ssl) noexcept
 {
-    int fd = create_socket(ip, port, _config);
+    int fd = server2::internal::create_socket(ip, port, _config.send_buf, _config.recv_buf, _config.backlog);
     if (fd < 0)
         return false;
 
@@ -114,7 +72,7 @@ void Server2::cb_accept(ev::io& w, int revents) noexcept
 
     while (true) {
         if (auto [fd, peer] = net::socket::tcp::accept(w.fd); fd >= 0) {
-            if (!set_no_delay(fd)) {
+            if (!server2::internal::set_no_delay(fd)) {
                 ::close(fd);
                 continue;
             }

@@ -32,6 +32,8 @@ set(LIB_SRC
     server2/Response.cpp
     server2/Pool.h
     server2/Pool.cpp
+    server2/ServerInt.h
+    server2/ServerInt.cpp
     client/Connection.h
     client/Connection.cpp
     client/Request.h
@@ -43,7 +45,7 @@ set(LIB_SRC
     client/Pool.cpp
     wait/Group.h
     wait/Group.cpp
-    )
+        server2/ServerInt.cpp server2/ServerInt.h)
 
 #Library
 add_library(sniper_${LIB} STATIC ${LIB_SRC})

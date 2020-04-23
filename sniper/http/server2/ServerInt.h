@@ -14,32 +14,13 @@
  * limitations under the License.
  */
 
-#include <sniper/http/server2/Connection.h>
-#include <sniper/http/server2/Request.h>
-#include "Pool.h"
+#pragma once
 
-namespace sniper::http::server2 {
+#include <sniper/std/string.h>
 
-intrusive_ptr<Connection> Pool::get() noexcept
-{
-    if (auto conn = make_connection(); conn) {
-        _conns.emplace(conn.get(), conn);
-        return conn;
-    }
+namespace sniper::http::server2::internal {
 
-    return nullptr;
-}
+bool set_no_delay(int fd) noexcept;
+int create_socket(const string& ip, uint16_t port, uint32_t send_buf, uint32_t recv_buf, int backlog) noexcept;
 
-void Pool::close() noexcept
-{
-    for (auto& e : _conns)
-        e.first->detach();
-}
-
-void Pool::detach(Connection* conn) noexcept
-{
-    if (auto it = _conns.find(conn); it != _conns.end())
-        _conns.erase(conn);
-}
-
-} // namespace sniper::http::server2
+} // namespace sniper::http::server2::internal
