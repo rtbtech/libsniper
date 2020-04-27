@@ -39,6 +39,7 @@ void Prepare::start() noexcept
 {
     if (!_w.is_active()) {
         _w.start();
+        _w.feed_event(0);
         _once = false;
     }
 }
@@ -47,6 +48,7 @@ void Prepare::start_once() noexcept
 {
     if (!_w.is_active()) {
         _w.start();
+        _w.feed_event(0);
         _once = true;
     }
 }
