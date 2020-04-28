@@ -37,7 +37,6 @@ set(LIB_SRC
 
 #Library
 add_library(sniper_${LIB} STATIC ${LIB_SRC})
-target_link_libraries(sniper_${LIB} ev.a)
 target_link_libraries(sniper_${LIB} sniper_event)
 target_link_libraries(sniper_${LIB} sniper_net)
 target_link_libraries(sniper_${LIB} sniper_pico)
