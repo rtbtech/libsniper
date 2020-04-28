@@ -18,6 +18,7 @@
 
 #include <boost/stacktrace.hpp>
 #include <fmt/format.h>
+#include <sniper/log/log.h>
 #include <stdexcept>
 #include <string>
 
@@ -35,19 +36,18 @@ namespace sniper {
     return frames;
 }
 
-template<typename Cond, typename... Args>
-inline void check(const Cond& cond, const char* fmt, const Args&... args)
+template<typename Cond, typename, typename Format>
+inline void check(const Cond& cond, Format msg)
+{
+    if (!cond)
+        throw std::runtime_error{fmt::format("{}", msg) + "\n" + stacktrace_to_string(boost::stacktrace::stacktrace())};
+}
+
+template<typename Cond, typename Format, typename... Args>
+inline void check(const Cond& cond, Format fmt, const Args&... args)
 {
     if (!cond)
         throw std::runtime_error{fmt::format(fmt, args...) + "\n"
-                                 + stacktrace_to_string(boost::stacktrace::stacktrace())};
-}
-
-template<typename Cond, typename Msg>
-inline void check(const Cond& cond, const Msg& msg)
-{
-    if (!cond)
-        throw std::runtime_error{fmt::format(msg) + "\n"
                                  + stacktrace_to_string(boost::stacktrace::stacktrace())};
 }
 
