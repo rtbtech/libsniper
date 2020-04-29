@@ -62,8 +62,7 @@ bool Server::bind(const string& ip, uint16_t port, bool ssl) noexcept
     if (fd < 0)
         return false;
 
-    if (!net::socket::tcp::set_no_delay(fd) || !net::socket::set_reuse_addr_and_port(fd)
-        || !net::socket::set_non_blocking(fd) || !net::socket::set_keep_alive(fd)) {
+    if (!net::socket::set_reuse_addr_and_port(fd) || !net::socket::set_non_blocking(fd)) {
         ::close(fd);
         return false;
     }
@@ -144,13 +143,7 @@ void Server::cb_accept(ev::io& w, int revents) noexcept
     auto* server_w = static_cast<ServerIO*>(&w);
 
     while (true) {
-        if (auto [fd, peer] = net::socket::tcp::accept(w.fd); fd >= 0) {
-            if (!net::socket::tcp::set_no_delay(fd) || !net::socket::set_non_blocking(fd)
-                || !net::socket::set_keep_alive(fd)) {
-                ::close(fd);
-                continue;
-            }
-
+        if (auto [fd, peer] = net::socket::tcp::accept4(w.fd); fd >= 0) {
             if (auto conn = get_conn(); conn) {
                 if (conn->accept(fd, peer, server_w->ssl))
                     continue;

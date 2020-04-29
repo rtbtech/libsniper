@@ -237,12 +237,41 @@ int accept(int server_fd, uint32_t& ip, uint16_t& port)
     return fd;
 }
 
+int accept4(int server_fd, uint32_t& ip, uint16_t& port)
+{
+    if (server_fd < 0) {
+        errno = EBADF;
+        return -1;
+    }
+
+    sockaddr_in servaddr{};
+    memset(&servaddr, 0, sizeof(servaddr));
+
+    socklen_t sa_len = sizeof(servaddr);
+    int fd = ::accept4(server_fd, (sockaddr*)&servaddr, &sa_len, SOCK_NONBLOCK);
+    if (fd >= 0) {
+        ip = servaddr.sin_addr.s_addr;
+        port = ntohs(servaddr.sin_port);
+    }
+
+    return fd;
+}
+
 tuple<int, Peer> accept(int server_fd)
 {
     uint32_t ip = 0;
     uint16_t port = 0;
 
     int rc = accept(server_fd, ip, port);
+    return make_tuple(rc, Peer(ip, port));
+}
+
+tuple<int, Peer> accept4(int server_fd)
+{
+    uint32_t ip = 0;
+    uint16_t port = 0;
+
+    int rc = accept4(server_fd, ip, port);
     return make_tuple(rc, Peer(ip, port));
 }
 

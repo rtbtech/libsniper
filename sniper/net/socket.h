@@ -56,7 +56,10 @@ namespace tcp {
 #endif
 
 [[nodiscard]] int accept(int server_fd, uint32_t& ip, uint16_t& port);
+[[nodiscard]] int accept4(int server_fd, uint32_t& ip, uint16_t& port);
+
 [[nodiscard]] tuple<int, Peer> accept(int server_fd);
+[[nodiscard]] tuple<int, Peer> accept4(int server_fd);
 
 [[nodiscard]] int connect(int fd, uint32_t ip, uint16_t port);
 [[nodiscard]] bool listen(int fd, int backlog);
