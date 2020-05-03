@@ -56,10 +56,11 @@ void Connection::clear() noexcept
     _user.clear();
 }
 
-void Connection::set(event::loop_ptr loop, intrusive_ptr<Pool> pool, int fd) noexcept
+void Connection::set(event::loop_ptr loop, intrusive_ptr<Pool> pool, const Config& config, int fd) noexcept
 {
     _loop = std::move(loop);
     _pool = std::move(pool);
+    _config = config;
     _fd = fd;
     _closed = false;
 

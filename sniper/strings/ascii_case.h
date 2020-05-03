@@ -19,6 +19,7 @@
 #pragma once
 
 #include <sniper/std/string.h>
+#include <strings.h>
 
 namespace sniper::strings {
 
@@ -31,5 +32,10 @@ inline void to_lower_ascii(string& str) noexcept
 }
 
 string to_lower_ascii_copy(string_view str);
+
+inline bool iequals(string_view a, string_view b) noexcept
+{
+    return strncasecmp(a.data(), b.data(), std::min(a.size(), b.size())) == 0;
+}
 
 } // namespace sniper::strings

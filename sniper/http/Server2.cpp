@@ -23,7 +23,7 @@
 
 namespace sniper::http {
 
-Server2::Server2(event::loop_ptr loop, server::Config config) :
+Server2::Server2(event::loop_ptr loop, server2::Config config) :
     _loop(std::move(loop)), _config(config), _pool(make_intrusive<server2::Pool>(_config.max_conns))
 {
     check(_loop, "[Server] loop is nullptr");
@@ -77,7 +77,7 @@ void Server2::cb_accept(ev::io& w, int revents) noexcept
 
             if (auto conn = _pool->get(); conn) {
                 // TODO: add params peer
-                conn->set(_loop, _pool, fd);
+                conn->set(_loop, _pool, _config, fd);
                 continue;
             }
 

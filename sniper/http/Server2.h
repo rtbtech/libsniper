@@ -18,7 +18,7 @@
 
 #include <sniper/cache/Cache.h>
 #include <sniper/event/Loop.h>
-#include <sniper/http/server/Config.h>
+#include <sniper/http/server2/Config.h>
 #include <sniper/http/server2/Connection.h>
 #include <sniper/http/server2/Pool.h>
 #include <sniper/http/server2/Request.h>
@@ -30,7 +30,7 @@ namespace sniper::http {
 class Server2 final
 {
 public:
-    explicit Server2(event::loop_ptr loop, server::Config config = {});
+    explicit Server2(event::loop_ptr loop, server2::Config config = {});
     ~Server2() noexcept;
 
     template<typename T>
@@ -43,7 +43,7 @@ private:
     void cb_accept(ev::io& w, [[maybe_unused]] int revents) noexcept;
 
     event::loop_ptr _loop;
-    server::Config _config;
+    server2::Config _config;
     list<unique_ptr<ev::io>> _w_accept;
     intrusive_ptr<server2::Pool> _pool;
 };

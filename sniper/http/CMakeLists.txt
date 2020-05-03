@@ -50,6 +50,7 @@ set(LIB_SRC
     server2/RequestBuf.cpp
     server2/Buffer.h
     server2/Buffer.cpp
+    server2/Config.h
     )
 
 #Library

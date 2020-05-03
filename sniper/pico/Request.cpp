@@ -26,6 +26,11 @@ namespace sniper::pico {
 
 namespace {
 
+const string_view header_content_length = "content-length";
+const string_view header_connection = "connection";
+const string_view header_connection_keep_alive = "keep-alive";
+const string_view header_connection_close = "close";
+
 pair_sv parse_param(string_view param)
 {
     if (auto pos = param.find_first_of('='); pos != string_view::npos)
@@ -100,12 +105,14 @@ ParseResult Request::parse(char* data, size_t size) noexcept
             minor_version = pico_minor_version;
 
         if (pico_method && pico_method_len) {
-            strings::to_lower_ascii(const_cast<char*>(pico_method), pico_method_len);
+            if (normalize_method)
+                strings::to_lower_ascii(const_cast<char*>(pico_method), pico_method_len);
             method = string_view(pico_method, pico_method_len);
         }
 
         if (pico_path && pico_path_len) {
-            strings::to_lower_ascii(const_cast<char*>(pico_path), pico_path_len);
+            if (normalize_path)
+                strings::to_lower_ascii(const_cast<char*>(pico_path), pico_path_len);
             path = string_view(pico_path, pico_path_len);
 
             // fragment
@@ -139,14 +146,16 @@ ParseResult Request::parse(char* data, size_t size) noexcept
         bool connection_found = false;
 
         for (unsigned i = 0; i < num_headers; i++) {
-            strings::to_lower_ascii(const_cast<char*>(pico_headers[i].name), pico_headers[i].name_len);
-            strings::to_lower_ascii(const_cast<char*>(pico_headers[i].value), pico_headers[i].value_len);
+            if (normalize_headers_names)
+                strings::to_lower_ascii(const_cast<char*>(pico_headers[i].name), pico_headers[i].name_len);
+            if (normalize_headers_values)
+                strings::to_lower_ascii(const_cast<char*>(pico_headers[i].value), pico_headers[i].value_len);
 
             string_view key(pico_headers[i].name, pico_headers[i].name_len);
             string_view val(pico_headers[i].value, pico_headers[i].value_len);
 
             // content-length
-            if (!content_length_found && key == "content-length") {
+            if (!content_length_found && strings::iequals(key, header_content_length)) {
                 content_length_found = true;
                 if (auto len = strings::fast_atoi64(val); len)
                     content_length = *len;
@@ -155,12 +164,12 @@ ParseResult Request::parse(char* data, size_t size) noexcept
             }
 
             // connection
-            if (!connection_found && key == "connection") {
+            if (!connection_found && strings::iequals(key, header_connection)) {
                 connection_found = true;
 
-                if (minor_version == 0 && val == "keep-alive")
+                if (minor_version == 0 && strings::iequals(val, header_connection_keep_alive))
                     keep_alive = true;
-                else if (val == "close")
+                else if (minor_version == 1 && strings::iequals(val, header_connection_close))
                     keep_alive = false;
             }
 

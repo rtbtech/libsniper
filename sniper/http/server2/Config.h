@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 - 2019, MetaHash, Oleg Romanenko (oleg@romanenko.ro)
+ * Copyright (c) 2020, RTBtech, MediaSniper, Oleg Romanenko (oleg@romanenko.ro)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,29 +16,31 @@
 
 #pragma once
 
-#include <sniper/cache/Cache.h>
-#include <sniper/pico/common.h>
-#include <sniper/std/boost_vector.h>
+#include <cstdint>
+#include <sniper/std/chrono.h>
 
-namespace sniper::pico {
+namespace sniper::http::server2 {
 
-struct Request final
+struct Config final
 {
-    void clear() noexcept;
-    [[nodiscard]] ParseResult parse(char* data, size_t size) noexcept;
+    uint32_t recv_buf = 1024 * 1024;
+    uint32_t send_buf = 1024 * 1024;
 
-    size_t header_size = 0;
-    size_t content_length = 0;
-    bool keep_alive = false;
+    int backlog = 10000;
+    size_t max_conns = 10000;
+    seconds conns_clean_interval = 5s;
 
-    int minor_version = 0;
-    string_view method;
-    string_view path;
-    string_view qs;
-    string_view fragment;
+//    milliseconds keep_alive_timeout = 1min;
+//    milliseconds request_read_timeout = 1s;
 
-    static_vector<pair_sv, MAX_HEADERS> headers;
-    small_vector<pair_sv, MAX_PARAMS> params;
+//    size_t header_max_size = 4 * 1024;
+//    size_t body_max_size = 128 * 1024;
+//    size_t header_chunk_size = 1024;
+
+    string server_name;
+
+    bool add_server_header = false;
+    bool add_date_header = false;
 
     // Normalizing (tolower)
     bool normalize_headers_names = false;
@@ -47,6 +49,5 @@ struct Request final
     bool normalize_method = false;
 };
 
-using RequestCache = cache::STDCache<pico::Request>;
 
-} // namespace sniper::pico
+} // namespace sniper::http::server
