@@ -129,6 +129,32 @@ bool set_no_delay(int fd)
     return setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &enable, sizeof(enable)) == 0;
 }
 
+bool set_defer_accept(int fd)
+{
+    if (fd < 0)
+        return false;
+
+#ifdef _GNU_SOURCE
+    int enable = 1;
+    return setsockopt(fd, IPPROTO_TCP, TCP_DEFER_ACCEPT, &enable, sizeof(enable)) == 0;
+#else
+    return false;
+#endif
+}
+
+bool set_fastopen(int fd)
+{
+    if (fd < 0)
+        return false;
+
+#ifdef _GNU_SOURCE
+    int qlen = 16 * 1024;
+    return setsockopt(fd, IPPROTO_TCP, TCP_FASTOPEN, &qlen, sizeof(qlen)) == 0;
+#else
+    return false;
+#endif
+}
+
 #ifdef _GNU_SOURCE
 bool get_rtt(int fd, uint32_t& rtt)
 {

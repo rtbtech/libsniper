@@ -41,6 +41,8 @@ namespace tcp {
 
 [[nodiscard]] int create();
 
+bool set_defer_accept(int fd);
+bool set_fastopen(int fd);
 [[nodiscard]] bool set_no_delay(int fd);
 [[nodiscard]] bool set_recv_buf(int fd, uint32_t size);
 [[nodiscard]] bool set_send_buf(int fd, uint32_t size);
