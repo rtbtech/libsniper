@@ -18,7 +18,7 @@
 
 #include <sniper/cache/ArrayCache.h>
 #include <sniper/cache/Cache.h>
-#include <sniper/http/server2/RequestBuf.h>
+#include <sniper/http/server2/Buffer.h>
 #include <sniper/pico/Request.h>
 #include <sniper/std/memory.h>
 
@@ -30,7 +30,6 @@ using RequestCache = cache::STDCache<Request>;
 struct Request final : public intrusive_cache_unsafe_ref_counter<Request, RequestCache>
 {
     void clear() noexcept;
-    void set(RequestBufCache::unique&& _buf);
 
     [[nodiscard]] string_view data() const noexcept;
     [[nodiscard]] size_t content_length() const noexcept;
@@ -41,20 +40,31 @@ struct Request final : public intrusive_cache_unsafe_ref_counter<Request, Reques
     [[nodiscard]] string_view qs() const noexcept;
     [[nodiscard]] string_view fragment() const noexcept;
 
-    [[nodiscard]] const small_vector<pair_sv, pico::MAX_HEADERS>& headers() const noexcept;
+    [[nodiscard]] const static_vector<pair_sv, pico::MAX_HEADERS>& headers() const noexcept;
     [[nodiscard]] const small_vector<pair_sv, pico::MAX_PARAMS>& params() const noexcept;
 
 private:
-    RequestBufCache::unique _buf = RequestBufCache::get_unique_empty();
-    small_vector<pair_sv, pico::MAX_HEADERS> _empty_headers;
+    friend inline intrusive_ptr<Request> make_request(intrusive_ptr<Buffer> head,
+                                                      pico::RequestCache::unique&& pico) noexcept;
+
+    intrusive_ptr<Buffer> _head;
+    pico::RequestCache::unique _pico = pico::RequestCache::get_unique_empty();
+
+    static_vector<pair_sv, pico::MAX_HEADERS> _empty_headers;
     small_vector<pair_sv, pico::MAX_PARAMS> _empty_params;
 };
 
 using RequestPtr = intrusive_ptr<Request>;
 
-inline RequestPtr make_request() noexcept
+inline RequestPtr make_request(intrusive_ptr<Buffer> head, pico::RequestCache::unique&& pico) noexcept
 {
-    return RequestCache::get_intrusive();
+    if (auto req = RequestCache::get_intrusive(); req) {
+        req->_head = std::move(head);
+        req->_pico = std::move(pico);
+        return req;
+    }
+
+    return nullptr;
 }
 
 } // namespace sniper::http::server2

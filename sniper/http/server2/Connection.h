@@ -58,14 +58,10 @@ struct Connection final : public intrusive_cache_unsafe_ref_counter<Connection, 
 
 private:
     void cb_read_test(ev::io& w, [[maybe_unused]] int revents) noexcept;
-    //    void cb_write_test(ev::io& w, [[maybe_unused]] int revents) noexcept;
-
     void cb_read(ev::io& w, [[maybe_unused]] int revents) noexcept;
     void cb_write(ev::io& w, [[maybe_unused]] int revents) noexcept;
     void cb_close(ev::prepare& w, [[maybe_unused]] int revents) noexcept;
     void cb_user(ev::prepare& w, [[maybe_unused]] int revents) noexcept;
-    //    WriteState cb_write_int(ev::io& w) noexcept;
-    //    WriteState cb_writev_int(ev::io& w) noexcept;
     WriteState cb_writev_int_resp(ev::io& w) noexcept;
 
     void close() noexcept;
@@ -82,16 +78,13 @@ private:
     ev::prepare _w_user;
 
     uint32_t _sent = 0;
+    size_t _processed = 0;
 
 
     intrusive_ptr<Buffer> _buf;
     boost::circular_buffer<intrusive_ptr<Response>> _out;
     vector<tuple<intrusive_ptr<Request>, intrusive_ptr<Response>>> _user;
-    pico::Request _pico;
-
-    uint32_t _read = 0;
-    uint32_t _req_count = 0;
-    array<char, 4096> _cbuf{};
+    pico::RequestCache::unique _pico = pico::RequestCache::get_unique_empty();
 };
 
 using ConnectionPtr = intrusive_ptr<Connection>;

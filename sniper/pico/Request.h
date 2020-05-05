@@ -26,6 +26,7 @@ struct Request final
 {
     void clear() noexcept;
     [[nodiscard]] ParseResult parse(char* data, size_t size) noexcept;
+    [[nodiscard]] ParseResult parse(string_view buf, bool normalize = true, bool normalize_vals = true) noexcept;
 
     size_t header_size = 0;
     size_t content_length = 0;
@@ -39,12 +40,6 @@ struct Request final
 
     static_vector<pair_sv, MAX_HEADERS> headers;
     small_vector<pair_sv, MAX_PARAMS> params;
-
-    // Normalizing (tolower)
-    bool normalize_headers_names = false;
-    bool normalize_headers_values = false;
-    bool normalize_path = false;
-    bool normalize_method = false;
 };
 
 using RequestCache = cache::STDCache<pico::Request>;

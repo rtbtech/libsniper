@@ -77,10 +77,15 @@ void Request::clear() noexcept
 
 ParseResult Request::parse(char* data, size_t size) noexcept
 {
-    if (!data || !size)
+    return parse(string_view(data, size));
+}
+
+ParseResult Request::parse(string_view buf, bool normalize, bool normalize_other) noexcept
+{
+    if (buf.empty())
         return ParseResult::Err;
 
-    if (size < 5)
+    if (buf.size() < 5)
         return ParseResult::Partial;
 
 
@@ -95,7 +100,7 @@ ParseResult Request::parse(char* data, size_t size) noexcept
 
     int pico_minor_version = -1;
 
-    int ssize = phr_parse_request(data, size, &pico_method, &pico_method_len, &pico_path, &pico_path_len,
+    int ssize = phr_parse_request(buf.data(), buf.size(), &pico_method, &pico_method_len, &pico_path, &pico_path_len,
                                   &pico_minor_version, pico_headers, &num_headers, 0);
 
     if (ssize > 0) {
@@ -105,13 +110,13 @@ ParseResult Request::parse(char* data, size_t size) noexcept
             minor_version = pico_minor_version;
 
         if (pico_method && pico_method_len) {
-            if (normalize_method)
+            if (normalize)
                 strings::to_lower_ascii(const_cast<char*>(pico_method), pico_method_len);
             method = string_view(pico_method, pico_method_len);
         }
 
         if (pico_path && pico_path_len) {
-            if (normalize_path)
+            if (normalize_other)
                 strings::to_lower_ascii(const_cast<char*>(pico_path), pico_path_len);
             path = string_view(pico_path, pico_path_len);
 
@@ -146,9 +151,9 @@ ParseResult Request::parse(char* data, size_t size) noexcept
         bool connection_found = false;
 
         for (unsigned i = 0; i < num_headers; i++) {
-            if (normalize_headers_names)
+            if (normalize)
                 strings::to_lower_ascii(const_cast<char*>(pico_headers[i].name), pico_headers[i].name_len);
-            if (normalize_headers_values)
+            if (normalize_other)
                 strings::to_lower_ascii(const_cast<char*>(pico_headers[i].value), pico_headers[i].value_len);
 
             string_view key(pico_headers[i].name, pico_headers[i].name_len);

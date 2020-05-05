@@ -101,7 +101,6 @@ public:
     using unique = std::unique_ptr<T, decltype(&release)>;
 
     [[nodiscard]] static unique get_unique(size_t size = 0) noexcept { return unique(get_raw(size), &release); }
-
     [[nodiscard]] static unique get_unique_empty() noexcept { return unique(nullptr, &release); }
 
     [[nodiscard]] static unique make_unique(T* ptr) noexcept { return unique(ptr, &release); }

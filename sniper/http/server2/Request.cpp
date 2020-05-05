@@ -18,9 +18,11 @@
 
 namespace sniper::http::server2 {
 
-void Request::clear() noexcept {}
-
-void Request::set(RequestBufCache::unique&& buf) {}
+void Request::clear() noexcept
+{
+    _head.reset();
+    _pico.reset();
+}
 
 string_view Request::data() const noexcept
 {
@@ -62,7 +64,7 @@ string_view Request::fragment() const noexcept
     return std::string_view();
 }
 
-const small_vector<pair_sv, pico::MAX_HEADERS>& Request::headers() const noexcept
+const static_vector<pair_sv, pico::MAX_HEADERS>& Request::headers() const noexcept
 {
     return _empty_headers;
 }

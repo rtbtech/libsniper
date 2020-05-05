@@ -19,60 +19,44 @@
 
 namespace sniper::http::server2 {
 
-Buffer::~Buffer()
-{
-    if (_d)
-        free(_d);
-}
-
 void Buffer::clear() noexcept
 {
-    processed = 0;
-    used = 0;
+    _size = 0;
 }
 
-bool Buffer::init(size_t s) noexcept
+bool Buffer::reserve(size_t s) noexcept
 {
-    if (s != size) {
-        if (_d)
-            free(_d);
-
-        _d = (char*)malloc(s);
-        size = s;
+    if (s != _capacity) {
+        _capacity = 0;
+        if (_data = cache::String::get_unique(s); _data) {
+            _data->resize(s);
+            _capacity = s;
+        }
     }
 
-    return _d;
+    return _capacity;
+}
+size_t Buffer::capacity() const noexcept
+{
+    return _capacity;
 }
 
-string_view Buffer::all_data() const noexcept
+size_t Buffer::size() const noexcept
 {
-    if (used)
-        return string_view(_d, used);
-
-    return {};
+    return _size;
 }
 
-string_view Buffer::curr_data() const noexcept
+BufferState Buffer::read(int fd, bool processed) noexcept
 {
-    if (used)
-        return string_view(_d + processed, used - processed);
+    if (!_capacity)
+        return BufferState::Error;
 
-    return {};
-}
-
-bool Buffer::full() const noexcept
-{
-    return size == used;
-}
-
-BufferState Buffer::read(int fd) noexcept
-{
     while (true) {
-        if (full())
+        if (_capacity == _size)
             return processed ? BufferState::Full : BufferState::Error;
 
-        if (auto count = ::read(fd, _d + used, size - used); count > 0) {
-            used += count;
+        if (auto count = ::read(fd, _data->data() + _size, _capacity - _size); count > 0) {
+            _size += count;
         }
         else if (count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
             return BufferState::Again;

@@ -30,12 +30,12 @@ struct Config final
     size_t max_conns = 10000;
     seconds conns_clean_interval = 5s;
 
-//    milliseconds keep_alive_timeout = 1min;
-//    milliseconds request_read_timeout = 1s;
+    //    milliseconds keep_alive_timeout = 1min;
+    //    milliseconds request_read_timeout = 1s;
 
-//    size_t header_max_size = 4 * 1024;
-//    size_t body_max_size = 128 * 1024;
-//    size_t header_chunk_size = 1024;
+    //    size_t header_max_size = 4 * 1024;
+    //    size_t body_max_size = 128 * 1024;
+    //    size_t header_chunk_size = 1024;
 
     string server_name;
 
@@ -43,11 +43,9 @@ struct Config final
     bool add_date_header = false;
 
     // Normalizing (tolower)
-    bool normalize_headers_names = false;
-    bool normalize_headers_values = false;
-    bool normalize_path = false;
-    bool normalize_method = false;
+    bool normalize = false; // method and headers names
+    bool normalize_other = false; // path, headers values
 };
 
 
-} // namespace sniper::http::server
+} // namespace sniper::http::server2

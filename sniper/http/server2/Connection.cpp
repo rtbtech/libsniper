@@ -48,12 +48,12 @@ void Connection::clear() noexcept
     _closed = true;
 
     _sent = 0;
-    _read = 0;
-    _req_count = 0;
+    _processed = 0;
 
     _buf.reset();
     _out.clear();
     _user.clear();
+    _pico.reset();
 }
 
 void Connection::set(event::loop_ptr loop, intrusive_ptr<Pool> pool, const Config& config, int fd) noexcept
@@ -79,9 +79,11 @@ void Connection::set(event::loop_ptr loop, intrusive_ptr<Pool> pool, const Confi
     _w_read.feed_event(0);
 
     _buf = make_buffer(buf_size);
+    _pico = pico::RequestCache::get_unique();
 
     check(_pool, "Pool is nullptr");
     check(_buf, "Buffer is nullptr");
+    check(_pico, "Pico request is nullptr");
     check(_pool->_cb, "Callback not set");
 }
 
@@ -124,48 +126,6 @@ void Connection::cb_close(ev::prepare& w, int revents) noexcept
 void Connection::cb_read(ev::io& w, int revents) noexcept
 {
     cb_read_test(w, revents);
-    //    if (_closed)
-    //        return;
-    //
-    //    while (true) {
-    //        if (auto count = read(_fd, _cbuf.data() + _read, _cbuf.size() - _read); count > 0) {
-    //            _read += count;
-    //
-    //            string_view data(_cbuf.data(), _read);
-    //            while (!data.empty()) {
-    //                auto pos = data.find("\r\n\r\n");
-    //                if (pos != string_view::npos) {
-    //                    // request ready
-    //                    data.remove_prefix(pos + 4);
-    //                    _req_count++;
-    //                }
-    //                else {
-    //                    break;
-    //                }
-    //            }
-    //
-    //            _read = data.size();
-    //            if (!data.empty()) {
-    //                log_warn("copy {} bytes", data.size());
-    //                memcpy(_cbuf.data(), data.data(), _read);
-    //            }
-    //        }
-    //        else if (count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-    //            if (_req_count && !_w_write.is_active()) {
-    //                _w_write.start();
-    //                _w_write.feed_event(0);
-    //                //                cb_write_int(_w_write);
-    //            }
-    //            return;
-    //        }
-    //        else if (count < 0 && errno == EINTR) {
-    //            continue;
-    //        }
-    //        else {
-    //            close();
-    //            return;
-    //        }
-    //    }
 }
 
 
@@ -175,17 +135,18 @@ void Connection::cb_read_test(ev::io& w, int revents) noexcept
         return;
 
     while (true) {
-        if (auto state = _buf->read(_fd); state != BufferState::Error) {
+        if (auto state = _buf->read(_fd, _processed); state != BufferState::Error) {
             // buffer full OR eagain
 
-            string_view data = _buf->curr_data();
+            auto data = last_data(*_buf, _processed);
             while (!data.empty()) {
-                if (auto res = _pico.parse((char*)data.data(), data.size()); res == pico::ParseResult::Complete) {
+                if (auto res = _pico->parse(data, _config.normalize, _config.normalize_other);
+                    res == pico::ParseResult::Complete) {
                     // request ready
-                    data.remove_prefix(_pico.header_size);
-                    _buf->processed += (_pico.header_size);
+                    data.remove_prefix(_pico->header_size);
+                    _processed += _pico->header_size;
 
-                    auto req = make_request();
+                    auto req = make_request(_buf, std::move(_pico));
                     auto resp = make_response();
 
                     if (!req || !resp) {
@@ -199,56 +160,32 @@ void Connection::cb_read_test(ev::io& w, int revents) noexcept
                     _user.emplace_back(req, resp);
                     _out.push_back(std::move(resp));
 
-                    _pico.clear();
+                    _pico = pico::RequestCache::get_unique();
                 }
                 else {
                     break;
                 }
-
-                //                if (auto pos = data.find("\r\n\r\n"); pos != string_view::npos) {
-                //                    // request ready
-                //                    data.remove_prefix(pos + 4);
-                //                    _buf->processed += (pos + 4);
-                //
-                //                    auto req = make_request();
-                //                    auto resp = make_response();
-                //
-                //                    if (!req || !resp) {
-                //                        close();
-                //                        return;
-                //                    }
-                //
-                //                    if (_out.full())
-                //                        _out.set_capacity(2 * _out.capacity());
-                //
-                //                    _user.emplace_back(req, resp);
-                //                    _out.push_back(std::move(resp));
-                //                }
-                //                else {
-                //                    break;
-                //                }
             }
 
-            // если не пуст
-            if (_buf->used) {
-                // если есть хвост
-                if (!_buf->curr_data().empty()) {
-                    // если это не первый запрос в буфере
-                    // то переносим его в новый буфер
-                    if (_buf->processed) {
-                        _buf = make_buffer(buf_size, _buf->curr_data());
-                    }
-                    // иначе - ничего не делаем - продолжаем читать в этот же буфер
+            // если есть хвост
+            if (!data.empty()) {
+                // если это не первый запрос в буфере
+                // то переносим его в новый буфер
+                if (_processed) {
+                    _buf = make_buffer(buf_size, data);
+                    _processed = 0;
                 }
-                // если хвоста нет - просто обнуляем буфер
-                else {
-                    _buf = make_buffer(buf_size);
-                }
+                // иначе - ничего не делаем - продолжаем читать в этот же буфер
+            }
+            // если хвоста нет - просто обнуляем буфер
+            else {
+                _buf = make_buffer(buf_size);
+                _processed = 0;
+            }
 
-                if (!_buf) {
-                    close();
-                    return;
-                }
+            if (!_buf) {
+                close();
+                return;
             }
 
             if (state == BufferState::Again) {
@@ -266,129 +203,12 @@ void Connection::cb_read_test(ev::io& w, int revents) noexcept
             return;
         }
     }
-
-
-    //    if (_closed)
-    //        return;
-
-    //    while (true) {
-    // читаем в буфер до
-    // - исчерпания буфера
-    // - до еагайн
-    // парсим буфер и шарим его по нескольким реквестам, если надо
-    // если в буфере
-
-
-    //        if (auto count = _buf->read(_fd); count > 0) {
-    //if (auto count = read(_fd, _req.data() + _read, _req.size() - _read); count > 0) {
-    //            _read += count;
-
-    //            do {
-    //                auto new_buf = RequestBufCache::get_unique();
-    //                new_buf->init(4096); // TODO: set from config
-    //                new_buf->copy(*_buf);
-    //
-    //                auto req = make_request();
-    //                auto resp = make_response();
-    //
-    //                if (!req || !resp) {
-    //                    close();
-    //                    return;
-    //                }
-    //
-    //                if (_out.full())
-    //                    _out.set_capacity(2 * _out.capacity());
-    //
-    //                _user.emplace_back(req, resp);
-    //                _out.push_back(std::move(resp));
-    //
-    //            } while (false);
-
-
-    //            string_view data(_req.data(), _read);
-    //            while (!data.empty()) {
-    //                auto pos = data.find("\r\n\r\n");
-    //                if (pos != string_view::npos) {
-    //                    // request ready
-    //                    data.remove_prefix(pos + 4);
-    //
-    //                    auto req = make_request();
-    //                    auto resp = make_response();
-    //
-    //                    if (!req || !resp) {
-    //                        close();
-    //                        return;
-    //                    }
-    //
-    //                    if (_out.full())
-    //                        _out.set_capacity(2 * _out.capacity());
-    //
-    //                    _user.emplace_back(req, resp);
-    //                    _out.push_back(std::move(resp));
-    //                }
-    //                else {
-    //                    break;
-    //                }
-    //            }
-    //
-    //            _read = data.size();
-    //            if (!data.empty()) {
-    //                log_warn("copy {} bytes", data.size());
-    //                memcpy(_req.data(), data.data(), _read);
-    //            }
-    //        }
-    //        else if (count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-    //            if (!_user.empty() && !_w_user.is_active()) {
-    //                _w_user.start();
-    //                _w_user.feed_event(0);
-    //            }
-    //            return;
-    //        }
-    //        else if (count < 0 && errno == EINTR) {
-    //            continue;
-    //        }
-    //        else {
-    //            close();
-    //            return;
-    //        }
-    //    }
 }
-
-//WriteState Connection::cb_writev_int(ev::io& w) noexcept
-//{
-//    while (_req_count) {
-//        iovec iov[32];
-//        for (unsigned i = 0; i < _req_count; i++) {
-//            iov[i].iov_base = (char*)response.data() + _sent;
-//            iov[i].iov_len = response.size() - _sent;
-//        }
-//
-//        if (ssize_t count = writev(_fd, iov, (int)_req_count); count > 0) {
-//            _sent = count % response.size();
-//            _req_count -= count / response.size();
-//
-//            for (unsigned i = 0; i < count / response.size(); i++)
-//                _out.pop_front();
-//        }
-//        else if (count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-//            return WriteState::Again;
-//        }
-//        else if (count < 0 && errno == EINTR) {
-//            continue;
-//        }
-//        else {
-//            close();
-//            return WriteState::Error;
-//        }
-//    }
-//
-//    return WriteState::Stop;
-//}
 
 WriteState Connection::cb_writev_int_resp(ev::io& w) noexcept
 {
     while (!_out.empty() && _out.front()->ready) {
-        iovec iov[32];
+        std::array<iovec, 1024> iov{};
         unsigned iov_count = 0;
 
         for (auto it = _out.begin(); iov_count < 32 && it != _out.end() && (*it)->ready; ++it) {
@@ -400,7 +220,7 @@ WriteState Connection::cb_writev_int_resp(ev::io& w) noexcept
         if (!iov_count)
             return WriteState::Stop;
 
-        if (ssize_t count = writev(_fd, iov, (int)iov_count); count > 0) {
+        if (ssize_t count = writev(_fd, iov.data(), (int)iov_count); count > 0) {
             _sent = count % response.size();
 
             for (unsigned i = 0; i < count / response.size(); i++)
