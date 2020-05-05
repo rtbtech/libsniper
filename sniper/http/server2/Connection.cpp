@@ -136,54 +136,14 @@ void Connection::cb_read_test(ev::io& w, int revents) noexcept
 
     while (true) {
         if (auto state = _buf->read(_fd, _processed); state != BufferState::Error) {
-            // buffer full OR eagain
+            // BufferState::Again or BufferState::Full
 
-            auto data = last_data(*_buf, _processed);
-            while (!data.empty()) {
-                if (auto res = _pico->parse(data, _config.normalize, _config.normalize_other);
-                    res == pico::ParseResult::Complete) {
-                    // request ready
-                    data.remove_prefix(_pico->header_size);
-                    _processed += _pico->header_size;
-
-                    auto req = make_request(_buf, std::move(_pico));
-                    auto resp = make_response();
-
-                    if (!req || !resp) {
-                        close();
-                        return;
-                    }
-
-                    if (_out.full())
-                        _out.set_capacity(2 * _out.capacity());
-
-                    _user.emplace_back(req, resp);
-                    _out.push_back(std::move(resp));
-
-                    _pico = pico::RequestCache::get_unique();
-                }
-                else {
-                    break;
-                }
+            if (!parse_buffer(_config, _buf, _processed, _user, _out, _pico)) {
+                close();
+                return;
             }
 
-            // если есть хвост
-            if (!data.empty()) {
-                // если это не первый запрос в буфере
-                // то переносим его в новый буфер
-                if (_processed) {
-                    _buf = make_buffer(buf_size, data);
-                    _processed = 0;
-                }
-                // иначе - ничего не делаем - продолжаем читать в этот же буфер
-            }
-            // если хвоста нет - просто обнуляем буфер
-            else {
-                _buf = make_buffer(buf_size);
-                _processed = 0;
-            }
-
-            if (!_buf) {
+            if (!renew_buffer(_buf, _processed)) {
                 close();
                 return;
             }
@@ -198,7 +158,7 @@ void Connection::cb_read_test(ev::io& w, int revents) noexcept
 
             continue;
         }
-        else {
+        else { // BufferState::Error
             close();
             return;
         }
@@ -303,6 +263,62 @@ void Connection::detach() noexcept
         _pool.reset();
         close();
     }
+}
+
+bool parse_buffer(const Config& config, const intrusive_ptr<Buffer>& buf, size_t& processed,
+                  vector<tuple<intrusive_ptr<Request>, intrusive_ptr<Response>>>& user,
+                  boost::circular_buffer<intrusive_ptr<Response>>& out, pico::RequestCache::unique& pico) noexcept
+{
+    auto data = last_data(*buf, processed);
+
+    while (!data.empty()) {
+        if (auto res = pico->parse(data, config.normalize, config.normalize_other);
+            res == pico::ParseResult::Complete) {
+            // request ready
+            data.remove_prefix(pico->header_size);
+            processed += pico->header_size;
+
+            auto req = make_request(buf, std::move(pico));
+            auto resp = make_response();
+
+            if (!req || !resp)
+                return false;
+
+            if (out.full())
+                out.set_capacity(2 * out.capacity());
+
+            user.emplace_back(req, resp);
+            out.push_back(std::move(resp));
+
+            if (pico = pico::RequestCache::get_unique(); !pico)
+                return false;
+        }
+        else {
+            break;
+        }
+    }
+
+    return true;
+}
+
+bool renew_buffer(intrusive_ptr<Buffer>& buf, size_t& processed) noexcept
+{
+    // если есть хвост
+    if (buf->size() > processed) {
+        // если это не первый запрос в буфере
+        // то переносим его в новый буфер
+        if (processed) {
+            buf = make_buffer(buf_size, last_data(*buf, processed));
+            processed = 0;
+        }
+        // иначе - ничего не делаем - продолжаем читать в этот же буфер
+    }
+    else { // если хвоста нет - просто обнуляем буфер
+        buf = make_buffer(buf_size);
+        processed = 0;
+    }
+
+    return buf != nullptr;
 }
 
 } // namespace sniper::http::server2

@@ -28,7 +28,7 @@ struct Response;
 
 struct Pool final : public intrusive_unsafe_ref_counter<Pool>
 {
-    Pool(size_t max_conns);
+    explicit Pool(size_t max_conns);
     ~Pool();
 
     intrusive_ptr<Connection> get() noexcept;

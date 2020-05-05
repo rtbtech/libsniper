@@ -46,8 +46,6 @@ set(LIB_SRC
     server2/Request.cpp
     server2/Response.h
     server2/Response.cpp
-    server2/RequestBuf.h
-    server2/RequestBuf.cpp
     server2/Buffer.h
     server2/Buffer.cpp
     server2/Config.h

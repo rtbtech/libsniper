@@ -21,7 +21,6 @@
 #include <sniper/event/Loop.h>
 #include <sniper/http/server2/Buffer.h>
 #include <sniper/http/server2/Config.h>
-#include <sniper/http/server2/RequestBuf.h>
 #include <sniper/pico/Request.h>
 #include <sniper/std/array.h>
 #include <sniper/std/deque.h>
@@ -68,7 +67,7 @@ private:
 
     event::loop_ptr _loop;
     intrusive_ptr<Pool> _pool;
-    server2::Config _config;
+    Config _config;
     int _fd = -1;
     bool _closed = true;
 
@@ -87,11 +86,16 @@ private:
     pico::RequestCache::unique _pico = pico::RequestCache::get_unique_empty();
 };
 
-using ConnectionPtr = intrusive_ptr<Connection>;
-
-inline ConnectionPtr make_connection() noexcept
+inline intrusive_ptr<Connection> make_connection() noexcept
 {
     return ConnectionCache::get_intrusive();
 }
+
+[[nodiscard]] bool parse_buffer(const Config& config, const intrusive_ptr<Buffer>& buf, size_t& processed,
+                                vector<tuple<intrusive_ptr<Request>, intrusive_ptr<Response>>>& user,
+                                boost::circular_buffer<intrusive_ptr<Response>>& out,
+                                pico::RequestCache::unique& pico) noexcept;
+
+[[nodiscard]] bool renew_buffer(intrusive_ptr<Buffer>& buf, size_t& processed) noexcept;
 
 } // namespace sniper::http::server2
