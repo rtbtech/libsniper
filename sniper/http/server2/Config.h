@@ -18,6 +18,7 @@
 
 #include <cstdint>
 #include <sniper/std/chrono.h>
+#include <sniper/std/string.h>
 
 namespace sniper::http::server2 {
 
