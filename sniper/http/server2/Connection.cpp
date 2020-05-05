@@ -269,7 +269,7 @@ bool parse_buffer(const Config& config, const intrusive_ptr<Buffer>& buf, size_t
                   vector<tuple<intrusive_ptr<Request>, intrusive_ptr<Response>>>& user,
                   boost::circular_buffer<intrusive_ptr<Response>>& out, pico::RequestCache::unique& pico) noexcept
 {
-    auto data = last_data(*buf, processed);
+    auto data = tail(*buf, processed);
 
     while (!data.empty()) {
         if (auto res = pico->parse(data, config.normalize, config.normalize_other);
@@ -308,7 +308,7 @@ bool renew_buffer(intrusive_ptr<Buffer>& buf, size_t& processed) noexcept
         // если это не первый запрос в буфере
         // то переносим его в новый буфер
         if (processed) {
-            buf = make_buffer(buf_size, last_data(*buf, processed));
+            buf = make_buffer(buf_size, tail(*buf, processed));
             processed = 0;
         }
         // иначе - ничего не делаем - продолжаем читать в этот же буфер

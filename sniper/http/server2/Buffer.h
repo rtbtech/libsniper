@@ -46,7 +46,7 @@ struct Buffer final : public intrusive_cache_unsafe_ref_counter<Buffer, BufferCa
 
 private:
     friend intrusive_ptr<Buffer> make_buffer(uint32_t size, string_view src) noexcept;
-    friend inline string_view last_data(const Buffer& buf, size_t processed) noexcept;
+    friend inline string_view tail(const Buffer& buf, size_t processed) noexcept;
     friend bool fill(string_view data, Buffer& buf) noexcept;
 
     uint32_t _capacity = 0;
@@ -78,7 +78,7 @@ inline intrusive_ptr<Buffer> make_buffer(uint32_t size, string_view src) noexcep
     return nullptr;
 }
 
-inline string_view last_data(const Buffer& buf, size_t processed) noexcept
+inline string_view tail(const Buffer& buf, size_t processed) noexcept
 {
     if (buf._size > processed)
         return string_view(buf._data->data() + processed, buf._size - processed);
