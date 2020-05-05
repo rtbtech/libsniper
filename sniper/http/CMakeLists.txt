@@ -13,6 +13,8 @@ set(LIB_SRC
     utils.cpp
     Wait.h
     Wait.cpp
+    Buffer.h
+    Buffer.cpp
     server/Config.h
     server/Connection.h
     server/Connection.cpp
@@ -46,8 +48,6 @@ set(LIB_SRC
     server2/Request.cpp
     server2/Response.h
     server2/Response.cpp
-    server2/Buffer.h
-    server2/Buffer.cpp
     server2/Config.h
     )
 

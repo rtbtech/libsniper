@@ -19,13 +19,18 @@
 #include <boost/circular_buffer.hpp>
 #include <sniper/cache/Cache.h>
 #include <sniper/event/Loop.h>
-#include <sniper/http/server2/Buffer.h>
 #include <sniper/http/server2/Config.h>
 #include <sniper/pico/Request.h>
-#include <sniper/std/list.h>
+#include <sniper/std/memory.h>
 #include <sniper/std/string.h>
 #include <sniper/std/tuple.h>
 #include <sniper/std/vector.h>
+
+namespace sniper::http {
+
+struct Buffer;
+
+} // namespace sniper::http
 
 namespace sniper::http::server2 {
 
@@ -84,10 +89,7 @@ private:
     pico::RequestCache::unique _pico = pico::RequestCache::get_unique_empty();
 };
 
-inline intrusive_ptr<Connection> make_connection() noexcept
-{
-    return ConnectionCache::get_intrusive();
-}
+intrusive_ptr<Connection> make_connection() noexcept;
 
 [[nodiscard]] bool parse_buffer(const Config& config, const intrusive_ptr<Buffer>& buf, size_t& processed,
                                 vector<tuple<intrusive_ptr<Request>, intrusive_ptr<Response>>>& user,

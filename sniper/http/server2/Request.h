@@ -16,11 +16,15 @@
 
 #pragma once
 
-#include <sniper/cache/ArrayCache.h>
 #include <sniper/cache/Cache.h>
-#include <sniper/http/server2/Buffer.h>
 #include <sniper/pico/Request.h>
 #include <sniper/std/memory.h>
+
+namespace sniper::http {
+
+struct Buffer;
+
+} // namespace sniper::http
 
 namespace sniper::http::server2 {
 
@@ -44,8 +48,7 @@ struct Request final : public intrusive_cache_unsafe_ref_counter<Request, Reques
     [[nodiscard]] const small_vector<pair_sv, pico::MAX_PARAMS>& params() const noexcept;
 
 private:
-    friend inline intrusive_ptr<Request> make_request(intrusive_ptr<Buffer> head,
-                                                      pico::RequestCache::unique&& pico) noexcept;
+    friend intrusive_ptr<Request> make_request(intrusive_ptr<Buffer> head, pico::RequestCache::unique&& pico) noexcept;
 
     intrusive_ptr<Buffer> _head;
     pico::RequestCache::unique _pico = pico::RequestCache::get_unique_empty();
@@ -54,17 +57,6 @@ private:
     small_vector<pair_sv, pico::MAX_PARAMS> _empty_params;
 };
 
-using RequestPtr = intrusive_ptr<Request>;
-
-inline RequestPtr make_request(intrusive_ptr<Buffer> head, pico::RequestCache::unique&& pico) noexcept
-{
-    if (auto req = RequestCache::get_intrusive(); req) {
-        req->_head = std::move(head);
-        req->_pico = std::move(pico);
-        return req;
-    }
-
-    return nullptr;
-}
+intrusive_ptr<Request> make_request(intrusive_ptr<Buffer> head, pico::RequestCache::unique&& pico) noexcept;
 
 } // namespace sniper::http::server2

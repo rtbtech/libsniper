@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-#include <sniper/log/log.h>
 #include "Buffer.h"
 
-namespace sniper::http::server2 {
+namespace sniper::http {
 
 void Buffer::clear() noexcept
 {
@@ -70,4 +69,4 @@ BufferState Buffer::read(int fd, bool processed) noexcept
     }
 }
 
-} // namespace sniper::http::server2
+} // namespace sniper::http

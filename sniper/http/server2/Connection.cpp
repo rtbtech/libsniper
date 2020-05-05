@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <sniper/http/Buffer.h>
 #include <sniper/http/server2/Pool.h>
 #include <sniper/http/server2/Request.h>
 #include <sniper/http/server2/Response.h>
@@ -22,6 +23,7 @@
 #include <sniper/std/string.h>
 #include <sys/uio.h>
 #include "Connection.h"
+
 
 namespace sniper::http::server2 {
 
@@ -269,7 +271,7 @@ bool parse_buffer(const Config& config, const intrusive_ptr<Buffer>& buf, size_t
                   vector<tuple<intrusive_ptr<Request>, intrusive_ptr<Response>>>& user,
                   boost::circular_buffer<intrusive_ptr<Response>>& out, pico::RequestCache::unique& pico) noexcept
 {
-    auto data = tail(*buf, processed);
+    auto data = tail_buffer(*buf, processed);
 
     while (!data.empty()) {
         if (auto res = pico->parse(data, config.normalize, config.normalize_other);
@@ -308,7 +310,7 @@ bool renew_buffer(intrusive_ptr<Buffer>& buf, size_t& processed) noexcept
         // если это не первый запрос в буфере
         // то переносим его в новый буфер
         if (processed) {
-            buf = make_buffer(buf_size, tail(*buf, processed));
+            buf = make_buffer(buf_size, tail_buffer(*buf, processed));
             processed = 0;
         }
         // иначе - ничего не делаем - продолжаем читать в этот же буфер
@@ -319,6 +321,11 @@ bool renew_buffer(intrusive_ptr<Buffer>& buf, size_t& processed) noexcept
     }
 
     return buf != nullptr;
+}
+
+intrusive_ptr<Connection> make_connection() noexcept
+{
+    return ConnectionCache::get_intrusive();
 }
 
 } // namespace sniper::http::server2

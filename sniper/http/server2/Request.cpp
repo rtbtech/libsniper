@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <sniper/http/Buffer.h>
 #include "Request.h"
 
 namespace sniper::http::server2 {
@@ -73,5 +74,17 @@ const small_vector<pair_sv, pico::MAX_PARAMS>& Request::params() const noexcept
 {
     return _empty_params;
 }
+
+intrusive_ptr<Request> make_request(intrusive_ptr<Buffer> head, pico::RequestCache::unique&& pico) noexcept
+{
+    if (auto req = RequestCache::get_intrusive(); req) {
+        req->_head = std::move(head);
+        req->_pico = std::move(pico);
+        return req;
+    }
+
+    return nullptr;
+}
+
 
 } // namespace sniper::http::server2

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <sniper/http/Buffer.h>
 #include <sniper/http/server2/Connection.h>
 #include <sniper/http/server2/Request.h>
 #include <sniper/http/server2/Response.h>

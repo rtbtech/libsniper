@@ -15,6 +15,7 @@
  */
 
 #include <linux/tcp.h>
+#include <sniper/http/Buffer.h>
 #include <sniper/log/log.h>
 #include <sniper/net/socket.h>
 #include <sniper/std/check.h>
