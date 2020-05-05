@@ -22,8 +22,6 @@
 #include <sniper/http/server2/Buffer.h>
 #include <sniper/http/server2/Config.h>
 #include <sniper/pico/Request.h>
-#include <sniper/std/array.h>
-#include <sniper/std/deque.h>
 #include <sniper/std/list.h>
 #include <sniper/std/string.h>
 #include <sniper/std/tuple.h>
