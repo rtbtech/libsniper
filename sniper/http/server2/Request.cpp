@@ -21,7 +21,9 @@ namespace sniper::http::server2 {
 
 void Request::clear() noexcept
 {
-    _head.reset();
+    _body = {};
+    _head_buf.reset();
+    _body_buf.reset();
     _pico.reset();
 }
 
@@ -75,16 +77,31 @@ const small_vector<pair_sv, pico::MAX_PARAMS>& Request::params() const noexcept
     return _empty_params;
 }
 
-intrusive_ptr<Request> make_request(intrusive_ptr<Buffer> head, pico::RequestCache::unique&& pico) noexcept
+intrusive_ptr<Request> make_request(intrusive_ptr<Buffer> head, pico::RequestCache::unique&& pico,
+                                    string_view body) noexcept
 {
     if (auto req = RequestCache::get_intrusive(); req) {
-        req->_head = std::move(head);
+        req->_head_buf = std::move(head);
         req->_pico = std::move(pico);
+        req->_body = body;
         return req;
     }
 
     return nullptr;
 }
 
+intrusive_ptr<Request> make_request(intrusive_ptr<Buffer> head_buf, intrusive_ptr<Buffer> body_buf,
+                                    pico::RequestCache::unique&& pico, string_view body) noexcept
+{
+    if (auto req = RequestCache::get_intrusive(); req) {
+        req->_head_buf = std::move(head_buf);
+        req->_body_buf = std::move(body_buf);
+        req->_pico = std::move(pico);
+        req->_body = body;
+        return req;
+    }
+
+    return nullptr;
+}
 
 } // namespace sniper::http::server2

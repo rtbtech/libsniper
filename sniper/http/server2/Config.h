@@ -34,8 +34,8 @@ struct Config final : public intrusive_unsafe_ref_counter<Config>
     //    milliseconds keep_alive_timeout = 1min;
     //    milliseconds request_read_timeout = 1s;
 
-    //    size_t header_max_size = 4 * 1024;
-    //    size_t body_max_size = 128 * 1024;
+    size_t header_max_size = 8 * 1024;
+    size_t body_max_size = 128 * 1024;
     //    size_t header_chunk_size = 1024;
 
     string server_name = "libsniper";

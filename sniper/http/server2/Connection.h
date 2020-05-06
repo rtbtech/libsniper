@@ -59,7 +59,8 @@ struct Connection final : public intrusive_cache_unsafe_ref_counter<Connection, 
     void disconnect() noexcept;
 
 private:
-    void cb_read_test(ev::io& w, [[maybe_unused]] int revents) noexcept;
+    bool cb_read_head(ev::io& w) noexcept;
+    bool cb_read_body(ev::io& w) noexcept;
     void cb_read(ev::io& w, [[maybe_unused]] int revents) noexcept;
     void cb_write(ev::io& w, [[maybe_unused]] int revents) noexcept;
     void cb_close(ev::prepare& w, [[maybe_unused]] int revents) noexcept;
@@ -83,7 +84,10 @@ private:
     size_t _processed = 0;
 
 
-    intrusive_ptr<Buffer> _buf;
+    bool _read_head = true;
+    intrusive_ptr<Buffer> _buf_head;
+    intrusive_ptr<Buffer> _buf_body;
+
     boost::circular_buffer<intrusive_ptr<Response>> _out;
     vector<tuple<intrusive_ptr<Request>, intrusive_ptr<Response>>> _user;
     pico::RequestCache::unique _pico = pico::RequestCache::get_unique_empty();

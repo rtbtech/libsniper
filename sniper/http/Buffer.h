@@ -44,7 +44,7 @@ struct Buffer final : public intrusive_cache_unsafe_ref_counter<Buffer, BufferCa
     [[nodiscard]] size_t size() const noexcept;
     [[nodiscard]] string_view tail(size_t processed) const noexcept;
 
-    [[nodiscard]] BufferState read(int fd, bool processed) noexcept;
+    [[nodiscard]] BufferState read(int fd, uint32_t max_size = 0) noexcept;
     [[nodiscard]] bool fill(string_view data) noexcept;
 
 private:
@@ -57,6 +57,6 @@ private:
 
 [[nodiscard]] intrusive_ptr<Buffer> make_buffer(uint32_t size) noexcept;
 [[nodiscard]] intrusive_ptr<Buffer> make_buffer(uint32_t size, string_view src) noexcept;
-[[nodiscard]] bool renew_buffer(intrusive_ptr<Buffer>& buf, size_t& processed) noexcept;
+[[nodiscard]] intrusive_ptr<Buffer> renew_buffer(const intrusive_ptr<Buffer>& buf, size_t& processed) noexcept;
 
 } // namespace sniper::http

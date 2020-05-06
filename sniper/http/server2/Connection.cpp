@@ -32,8 +32,6 @@ namespace {
 const string_view response =
     "HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: keep-alive\r\nAccess-Control-Allow-Origin: *\r\n\r\n";
 
-constexpr uint32_t buf_size = 8192;
-
 } // namespace
 
 Connection::Connection()
@@ -52,7 +50,9 @@ void Connection::clear() noexcept
     _sent = 0;
     _processed = 0;
 
-    _buf.reset();
+    _read_head = true;
+    _buf_head.reset();
+    _buf_body.reset();
     _out.clear();
     _user.clear();
     _pico.reset();
@@ -63,6 +63,9 @@ void Connection::set(event::loop_ptr loop, intrusive_ptr<Pool> pool, intrusive_p
     _loop = std::move(loop);
     _pool = std::move(pool);
     _config = std::move(config);
+    check(_pool, "Pool is nullptr");
+    check(_config, "Config is nullptr");
+
     _fd = fd;
     _closed = false;
 
@@ -80,12 +83,10 @@ void Connection::set(event::loop_ptr loop, intrusive_ptr<Pool> pool, intrusive_p
     _w_write.set(fd, ev::WRITE);
     _w_read.feed_event(0);
 
-    _buf = make_buffer(buf_size);
+    _buf_head = make_buffer(_config->header_max_size);
     _pico = pico::RequestCache::get_unique();
 
-    check(_pool, "Pool is nullptr");
-    check(_config, "Config is nullptr");
-    check(_buf, "Buffer is nullptr");
+    check(_buf_head, "Buffer is nullptr");
     check(_pico, "Pico request is nullptr");
     check(_pool->_cb, "Callback not set");
 }
@@ -128,43 +129,108 @@ void Connection::cb_close(ev::prepare& w, int revents) noexcept
 
 void Connection::cb_read(ev::io& w, int revents) noexcept
 {
-    cb_read_test(w, revents);
-}
-
-
-void Connection::cb_read_test(ev::io& w, int revents) noexcept
-{
     if (_closed)
         return;
 
     while (true) {
-        if (auto state = _buf->read(_fd, _processed); state != BufferState::Error) {
-            // BufferState::Again or BufferState::Full
+        if (_read_head && !cb_read_head(w))
+            break;
 
-            if (!parse_buffer(*_config, _buf, _processed, _user, _out, _pico)) {
-                close();
-                return;
-            }
+        if (!_read_head && !cb_read_body(w))
+            break;
+    }
 
-            if (!renew_buffer(_buf, _processed)) {
-                close();
-                return;
-            }
+    if (!_closed && !_user.empty() && !_w_user.is_active()) {
+        _w_user.start();
+        _w_user.feed_event(0);
+    }
+}
 
-            if (state == BufferState::Again) {
-                if (!_user.empty() && !_w_user.is_active()) {
-                    _w_user.start();
-                    _w_user.feed_event(0);
-                }
-                return;
-            }
+bool Connection::cb_read_head(ev::io& w) noexcept
+{
+    if (auto state = _buf_head->read(_fd); state != BufferState::Error) {
+        // BufferState::Again or BufferState::Full
 
-            continue;
-        }
-        else { // BufferState::Error
+        if (!parse_buffer(*_config, _buf_head, _processed, _user, _out, _pico)) {
             close();
-            return;
+            return false;
         }
+
+        if (_pico->content_length) {
+            if (_pico->content_length <= (_buf_head->capacity() - _processed)) {
+                // Можно дочитать в этот же буффер
+                _buf_body = _buf_head;
+            }
+            else {
+                // нужен новый буффер
+                _buf_body = make_buffer(_pico->content_length, _buf_head->tail(_processed));
+                _processed = 0;
+            }
+
+            if (!_buf_body) {
+                close();
+                return false;
+            }
+
+            _read_head = false;
+        }
+        else if (_buf_head = renew_buffer(_buf_head, _processed); !_buf_head) {
+            close();
+            return false;
+        }
+
+        if (state == BufferState::Again)
+            return false;
+
+        return true;
+    }
+    else { // BufferState::Error
+        close();
+        return false;
+    }
+}
+
+bool Connection::cb_read_body(ev::io& w) noexcept
+{
+    auto need_size = _pico->content_length - (_buf_body->size() - _processed);
+
+    if (auto state = _buf_body->read(_fd, need_size); state != BufferState::Error) {
+        if (_pico->content_length == (_buf_body->size() - _processed)) {
+
+            auto req = make_request(_buf_head, _buf_body, std::move(_pico), _buf_body->tail(_processed));
+            auto resp = make_response();
+
+            if (!req || !resp) {
+                close();
+                return false;
+            }
+
+            if (_out.full())
+                _out.set_capacity(2 * _out.capacity());
+
+            _user.emplace_back(req, resp);
+            _out.push_back(std::move(resp));
+
+            _buf_head = make_buffer(_config->header_max_size);
+            _buf_body.reset();
+            _pico = pico::RequestCache::get_unique();
+            _processed = 0;
+            _read_head = false;
+
+            if (!_pico || !_buf_head) {
+                close();
+                return false;
+            }
+        }
+
+        if (state == BufferState::Again)
+            return false;
+
+        return true;
+    }
+    else { // BufferState::Error
+        close();
+        return false;
     }
 }
 
@@ -275,26 +341,45 @@ bool parse_buffer(const Config& config, const intrusive_ptr<Buffer>& buf, size_t
     auto data = buf->tail(processed);
 
     while (!data.empty()) {
+        // check reading head or body
         if (auto res = pico->parse(data, config.normalize, config.normalize_other);
             res == pico::ParseResult::Complete) {
+
             // request ready
             data.remove_prefix(pico->header_size);
             processed += pico->header_size;
 
-            auto req = make_request(buf, std::move(pico));
-            auto resp = make_response();
+            if (!pico->content_length || pico->content_length <= data.size()) {
+                intrusive_ptr<Request> req;
 
-            if (!req || !resp)
-                return false;
+                if (pico->content_length) {
+                    auto body = data.substr(0, pico->content_length);
+                    data.remove_prefix(pico->content_length);
+                    processed += pico->content_length;
 
-            if (out.full())
-                out.set_capacity(2 * out.capacity());
+                    req = make_request(buf, std::move(pico), body);
+                }
+                else {
+                    req = make_request(buf, std::move(pico));
+                }
 
-            user.emplace_back(req, resp);
-            out.push_back(std::move(resp));
+                auto resp = make_response();
 
-            if (pico = pico::RequestCache::get_unique(); !pico)
-                return false;
+                if (!req || !resp)
+                    return false;
+
+                if (out.full())
+                    out.set_capacity(2 * out.capacity());
+
+                user.emplace_back(req, resp);
+                out.push_back(std::move(resp));
+
+                if (pico = pico::RequestCache::get_unique(); !pico)
+                    return false;
+            }
+            else {
+                return pico->content_length <= config.body_max_size;
+            }
         }
         else {
             break;

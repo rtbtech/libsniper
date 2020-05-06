@@ -45,16 +45,18 @@ size_t Buffer::size() const noexcept
     return _size;
 }
 
-BufferState Buffer::read(int fd, bool processed) noexcept
+BufferState Buffer::read(int fd, uint32_t max_size) noexcept
 {
     if (!_capacity)
         return BufferState::Error;
 
     while (true) {
         if (_capacity == _size)
-            return processed ? BufferState::Full : BufferState::Error;
+            return BufferState::Full;
 
-        if (auto count = ::read(fd, _data->data() + _size, _capacity - _size); count > 0) {
+        max_size = max_size ? std::min(max_size, _capacity - _size) : _capacity - _size;
+
+        if (auto count = ::read(fd, _data->data() + _size, max_size); count > 0) {
             _size += count;
         }
         else if (count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
@@ -112,24 +114,30 @@ bool Buffer::fill(string_view data) noexcept
     return false;
 }
 
-bool renew_buffer(intrusive_ptr<Buffer>& buf, size_t& processed) noexcept
+intrusive_ptr<Buffer> renew_buffer(const intrusive_ptr<Buffer>& buf, size_t& processed) noexcept
 {
     // если есть хвост
     if (buf->size() > processed) {
         // если это не первый запрос в буфере
         // то переносим его в новый буфер
         if (processed) {
-            buf = make_buffer(buf->capacity(), buf->tail(processed));
+            auto new_buf = make_buffer(buf->capacity(), buf->tail(processed));
             processed = 0;
+            return new_buf;
+        }
+        else if (buf->size() == buf->capacity()) {
+            // Если буфер полон и там всего один запрос.
+            // запрос не поместился в буфер - закрываем соединение
+            return nullptr;
         }
         // иначе - ничего не делаем - продолжаем читать в этот же буфер
     }
     else { // если хвоста нет - просто обнуляем буфер
-        buf = make_buffer(buf->capacity());
         processed = 0;
+        return make_buffer(buf->capacity());
     }
 
-    return buf != nullptr;
+    return buf;
 }
 
 } // namespace sniper::http
