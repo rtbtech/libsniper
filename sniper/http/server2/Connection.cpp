@@ -58,11 +58,11 @@ void Connection::clear() noexcept
     _pico.reset();
 }
 
-void Connection::set(event::loop_ptr loop, intrusive_ptr<Pool> pool, const Config& config, int fd) noexcept
+void Connection::set(event::loop_ptr loop, intrusive_ptr<Pool> pool, intrusive_ptr<Config> config, int fd) noexcept
 {
     _loop = std::move(loop);
     _pool = std::move(pool);
-    _config = config;
+    _config = std::move(config);
     _fd = fd;
     _closed = false;
 
@@ -84,6 +84,7 @@ void Connection::set(event::loop_ptr loop, intrusive_ptr<Pool> pool, const Confi
     _pico = pico::RequestCache::get_unique();
 
     check(_pool, "Pool is nullptr");
+    check(_config, "Config is nullptr");
     check(_buf, "Buffer is nullptr");
     check(_pico, "Pico request is nullptr");
     check(_pool->_cb, "Callback not set");
@@ -140,7 +141,7 @@ void Connection::cb_read_test(ev::io& w, int revents) noexcept
         if (auto state = _buf->read(_fd, _processed); state != BufferState::Error) {
             // BufferState::Again or BufferState::Full
 
-            if (!parse_buffer(_config, _buf, _processed, _user, _out, _pico)) {
+            if (!parse_buffer(*_config, _buf, _processed, _user, _out, _pico)) {
                 close();
                 return;
             }

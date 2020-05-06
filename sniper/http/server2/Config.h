@@ -18,18 +18,18 @@
 
 #include <cstdint>
 #include <sniper/std/chrono.h>
+#include <sniper/std/memory.h>
 #include <sniper/std/string.h>
 
 namespace sniper::http::server2 {
 
-struct Config final
+struct Config final : public intrusive_unsafe_ref_counter<Config>
 {
     uint32_t recv_buf = 1024 * 1024;
     uint32_t send_buf = 1024 * 1024;
 
     int backlog = 10000;
     size_t max_conns = 10000;
-    seconds conns_clean_interval = 5s;
 
     //    milliseconds keep_alive_timeout = 1min;
     //    milliseconds request_read_timeout = 1s;
@@ -38,7 +38,7 @@ struct Config final
     //    size_t body_max_size = 128 * 1024;
     //    size_t header_chunk_size = 1024;
 
-    string server_name;
+    string server_name = "libsniper";
 
     bool add_server_header = false;
     bool add_date_header = false;
@@ -48,5 +48,9 @@ struct Config final
     bool normalize_other = false; // path, headers values
 };
 
+inline intrusive_ptr<Config> make_config() noexcept
+{
+    return make_intrusive<Config>();
+}
 
 } // namespace sniper::http::server2

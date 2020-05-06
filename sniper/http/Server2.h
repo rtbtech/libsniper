@@ -30,7 +30,7 @@ namespace sniper::http {
 class Server2 final
 {
 public:
-    explicit Server2(event::loop_ptr loop, server2::Config config = {});
+    explicit Server2(event::loop_ptr loop, intrusive_ptr<server2::Config> config = nullptr);
     ~Server2() noexcept;
 
     template<typename T>
@@ -43,7 +43,7 @@ private:
     void cb_accept(ev::io& w, [[maybe_unused]] int revents) noexcept;
 
     event::loop_ptr _loop;
-    server2::Config _config;
+    intrusive_ptr<server2::Config> _config;
     list<unique_ptr<ev::io>> _w_accept;
     intrusive_ptr<server2::Pool> _pool;
 };

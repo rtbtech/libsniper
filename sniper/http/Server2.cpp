@@ -24,10 +24,18 @@
 
 namespace sniper::http {
 
-Server2::Server2(event::loop_ptr loop, server2::Config config) :
-    _loop(std::move(loop)), _config(config), _pool(make_intrusive<server2::Pool>(_config.max_conns))
+Server2::Server2(event::loop_ptr loop, intrusive_ptr<server2::Config> config) :
+    _loop(std::move(loop)), _config(std::move(config))
 {
     check(_loop, "[Server] loop is nullptr");
+
+    if (!_config)
+        _config = server2::make_config();
+
+    check(_config, "[Server] config is nullptr");
+
+    _pool = make_intrusive<server2::Pool>(_config->max_conns);
+    check(_pool, "[Server] pool is nullptr");
 }
 
 Server2::~Server2() noexcept
@@ -48,7 +56,7 @@ bool Server2::bind(uint16_t port) noexcept
 
 bool Server2::bind(const string& ip, uint16_t port) noexcept
 {
-    int fd = server2::internal::create_socket(ip, port, _config.send_buf, _config.recv_buf, _config.backlog);
+    int fd = server2::internal::create_socket(ip, port, _config->send_buf, _config->recv_buf, _config->backlog);
     if (fd < 0)
         return false;
 

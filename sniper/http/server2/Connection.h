@@ -52,7 +52,7 @@ struct Connection final : public intrusive_cache_unsafe_ref_counter<Connection, 
     Connection();
 
     void clear() noexcept;
-    void set(event::loop_ptr loop, intrusive_ptr<Pool> pool, const Config& config, int fd) noexcept;
+    void set(event::loop_ptr loop, intrusive_ptr<Pool> pool, intrusive_ptr<Config> config, int fd) noexcept;
     void send(const intrusive_ptr<Response>& resp) noexcept;
 
     void detach() noexcept;
@@ -70,7 +70,7 @@ private:
 
     event::loop_ptr _loop;
     intrusive_ptr<Pool> _pool;
-    Config _config;
+    intrusive_ptr<Config> _config;
     int _fd = -1;
     bool _closed = true;
 
