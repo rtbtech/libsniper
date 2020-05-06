@@ -69,4 +69,67 @@ BufferState Buffer::read(int fd, bool processed) noexcept
     }
 }
 
+intrusive_ptr<Buffer> make_buffer(uint32_t size) noexcept
+{
+    if (auto dst = BufferCache::get_intrusive(); dst->reserve(size))
+        return dst;
+
+    return nullptr;
+}
+
+intrusive_ptr<Buffer> make_buffer(uint32_t size, string_view src) noexcept
+{
+    if (src.size() > size)
+        size = src.size();
+
+    if (auto dst = BufferCache::get_intrusive(); dst->reserve(size)) {
+        if (!src.empty()) {
+            memcpy(dst->_data->data(), src.data(), src.size());
+            dst->_size = src.size();
+        }
+        return dst;
+    }
+
+    return nullptr;
+}
+
+string_view Buffer::tail(size_t processed) const noexcept
+{
+    if (_size > processed)
+        return string_view(_data->data() + processed, _size - processed);
+
+    return {};
+}
+
+bool Buffer::fill(string_view data) noexcept
+{
+    if (!data.empty() && data.size() <= (_capacity - _size)) {
+        memcpy(_data->data() + _size, data.data(), data.size());
+        _size += data.size();
+        return true;
+    }
+
+    return false;
+}
+
+bool renew_buffer(intrusive_ptr<Buffer>& buf, size_t& processed) noexcept
+{
+    // если есть хвост
+    if (buf->size() > processed) {
+        // если это не первый запрос в буфере
+        // то переносим его в новый буфер
+        if (processed) {
+            buf = make_buffer(buf->capacity(), buf->tail(processed));
+            processed = 0;
+        }
+        // иначе - ничего не делаем - продолжаем читать в этот же буфер
+    }
+    else { // если хвоста нет - просто обнуляем буфер
+        buf = make_buffer(buf->capacity());
+        processed = 0;
+    }
+
+    return buf != nullptr;
+}
+
 } // namespace sniper::http

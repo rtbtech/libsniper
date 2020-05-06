@@ -96,6 +96,4 @@ intrusive_ptr<Connection> make_connection() noexcept;
                                 boost::circular_buffer<intrusive_ptr<Response>>& out,
                                 pico::RequestCache::unique& pico) noexcept;
 
-[[nodiscard]] bool renew_buffer(intrusive_ptr<Buffer>& buf, size_t& processed) noexcept;
-
 } // namespace sniper::http::server2
