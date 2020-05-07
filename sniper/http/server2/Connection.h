@@ -59,8 +59,6 @@ struct Connection final : public intrusive_cache_unsafe_ref_counter<Connection, 
     void disconnect() noexcept;
 
 private:
-    bool cb_read_head(ev::io& w) noexcept;
-    bool cb_read_body(ev::io& w) noexcept;
     void cb_read(ev::io& w, [[maybe_unused]] int revents) noexcept;
     void cb_write(ev::io& w, [[maybe_unused]] int revents) noexcept;
     void cb_close(ev::prepare& w, [[maybe_unused]] int revents) noexcept;

@@ -130,35 +130,32 @@ void Connection::cb_read(ev::io& w, int revents) noexcept
     if (_closed)
         return;
 
-    while (cb_read_head(w)) {}
+    while (true) {
+        if (auto state = _buf->read(_fd); state != BufferState::Error) { // BufferState::Again or BufferState::Full
+            if (!parse_buffer(*_config, _buf, _processed, _user, _out, _pico)) {
+                close();
+                return;
+            }
+
+            if (_buf = renew_buffer(_buf, _config->buffer_renew_threshold, _processed); !_buf) {
+                close();
+                return;
+            }
+
+            if (state == BufferState::Again)
+                break;
+
+            continue;
+        }
+        else { // BufferState::Error
+            close();
+            return;
+        }
+    }
 
     if (!_closed && !_user.empty() && !_w_user.is_active()) {
         _w_user.start();
         _w_user.feed_event(0);
-    }
-}
-
-bool Connection::cb_read_head(ev::io& w) noexcept
-{
-    if (auto state = _buf->read(_fd); state != BufferState::Error) { // BufferState::Again or BufferState::Full
-        if (!parse_buffer(*_config, _buf, _processed, _user, _out, _pico)) {
-            close();
-            return false;
-        }
-
-        if (_buf = renew_buffer(_buf, _config->buffer_renew_threshold, _processed); !_buf) {
-            close();
-            return false;
-        }
-
-        if (state == BufferState::Again)
-            return false;
-
-        return true;
-    }
-    else { // BufferState::Error
-        close();
-        return false;
     }
 }
 
