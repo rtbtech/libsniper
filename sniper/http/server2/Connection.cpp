@@ -161,11 +161,11 @@ void Connection::cb_read(ev::io& w, int revents) noexcept
 
 WriteState Connection::cb_writev_int_resp(ev::io& w) noexcept
 {
-    while (!_out.empty() && _out.front()->ready) {
+    while (!_out.empty() && _out.front()->_ready) {
         std::array<iovec, 1024> iov{};
         unsigned iov_count = 0;
 
-        for (auto it = _out.begin(); iov_count < 32 && it != _out.end() && (*it)->ready; ++it) {
+        for (auto it = _out.begin(); iov_count < 32 && it != _out.end() && (*it)->_ready; ++it) {
             iov[iov_count].iov_base = (char*)response.data() + _sent;
             iov[iov_count].iov_len = response.size() - _sent;
             iov_count++;
@@ -242,7 +242,14 @@ void Connection::cb_user(ev::prepare& w, int revents) noexcept
 void Connection::send(const intrusive_ptr<Response>& resp) noexcept
 {
     if (resp && !_closed) {
-        resp->ready = true;
+        if (!resp->set_ready()) {
+            if (!_w_close.is_active()) {
+                _w_close.start();
+                _w_close.feed_event(0);
+            }
+            return;
+        }
+
         if (!_w_write.is_active() && !_out.empty() && _out.front() == resp) {
             _w_write.start();
             _w_write.feed_event(0);
@@ -281,7 +288,7 @@ bool parse_buffer(const Config& config, const intrusive_ptr<Buffer>& buf, size_t
             }
 
             auto req = make_request(buf, std::move(pico), body);
-            auto resp = make_response();
+            auto resp = make_response(req->minor_version(), req->keep_alive());
 
             if (!req || !resp)
                 return false;

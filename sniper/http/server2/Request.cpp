@@ -28,51 +28,81 @@ void Request::clear() noexcept
 
 string_view Request::data() const noexcept
 {
-    return std::string_view();
+    if (_buf)
+        return _body;
+
+    return {};
 }
 
 size_t Request::content_length() const noexcept
 {
-    return 0;
+    if (_pico)
+        return _pico->content_length;
+
+    return {};
 }
 
 bool Request::keep_alive() const noexcept
 {
-    return false;
+    if (_pico)
+        return _pico->keep_alive;
+
+    return {};
 }
 
 int Request::minor_version() const noexcept
 {
-    return 0;
+    if (_pico)
+        return _pico->minor_version;
+
+    return {};
 }
 
 string_view Request::method() const noexcept
 {
-    return std::string_view();
+    if (_pico)
+        return _pico->method;
+
+    return {};
 }
 
 string_view Request::path() const noexcept
 {
-    return std::string_view();
+    if (_pico)
+        return _pico->path;
+
+    return {};
 }
 
 string_view Request::qs() const noexcept
 {
-    return std::string_view();
+    if (_pico)
+        return _pico->qs;
+
+    return {};
 }
 
 string_view Request::fragment() const noexcept
 {
-    return std::string_view();
+    if (_pico)
+        return _pico->fragment;
+
+    return {};
 }
 
 const static_vector<pair_sv, pico::MAX_HEADERS>& Request::headers() const noexcept
 {
+    if (_pico)
+        return _pico->headers;
+
     return _empty_headers;
 }
 
 const small_vector<pair_sv, pico::MAX_PARAMS>& Request::params() const noexcept
 {
+    if (_pico)
+        return _pico->params;
+
     return _empty_params;
 }
 

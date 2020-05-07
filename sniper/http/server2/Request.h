@@ -59,7 +59,7 @@ private:
     small_vector<pair_sv, pico::MAX_PARAMS> _empty_params;
 };
 
-intrusive_ptr<Request> make_request(intrusive_ptr<Buffer> buf, pico::RequestCache::unique&& pico,
-                                    string_view body = {}) noexcept;
+[[nodiscard]] intrusive_ptr<Request> make_request(intrusive_ptr<Buffer> buf, pico::RequestCache::unique&& pico,
+                                                  string_view body = {}) noexcept;
 
 } // namespace sniper::http::server2

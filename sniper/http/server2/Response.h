@@ -19,13 +19,16 @@
 #include <sniper/cache/ArrayCache.h>
 #include <sniper/cache/Cache.h>
 #include <sniper/http/server/Status.h>
+#include <sniper/std/boost_vector.h>
 #include <sniper/std/memory.h>
 #include <sniper/std/string.h>
 #include <sniper/std/tuple.h>
 #include <sniper/std/vector.h>
+#include <sys/uio.h>
 
 namespace sniper::http::server2 {
 
+struct Connection;
 struct Response;
 using ResponseCache = cache::STDCache<Response>;
 using Chunk = tuple<string_view, cache::String::unique>;
@@ -34,8 +37,6 @@ struct Response final : public intrusive_cache_unsafe_ref_counter<Response, Resp
 {
     void clear() noexcept;
 
-    bool ready = false;
-    bool close = false;
     ResponseStatus code = ResponseStatus::NOT_IMPLEMENTED;
 
     // "Content-Type: text/html; charset=utf-8\r\n";
@@ -47,19 +48,37 @@ struct Response final : public intrusive_cache_unsafe_ref_counter<Response, Resp
     void set_data_nocopy(string_view data) noexcept;
     void set_data(cache::String::unique&& data_ptr) noexcept;
 
-    [[nodiscard]] cache::Vector<Chunk>::unique headers() noexcept;
-    [[nodiscard]] Chunk data() noexcept;
+    //    [[nodiscard]] cache::Vector<Chunk>::unique headers() noexcept;
+    //    [[nodiscard]] Chunk data() noexcept;
 
 private:
-    cache::Vector<Chunk>::unique _headers = cache::Vector<Chunk>::get_unique_empty();
+    friend struct Connection;
+    friend intrusive_ptr<Response> make_response(int minor_version, bool keep_alive) noexcept;
+
+    bool set_ready() noexcept;
+    void fill_iov() noexcept;
+
+    bool _ready = false;
+    bool _keep_alive = false;
+    int _minor_version = 0;
+
+    string_view _first_header;
+    small_vector<Chunk, 32> _headers;
     Chunk _data{""sv, cache::StringCache::get_unique_empty()};
+
+    small_vector<iovec, 32> _iov;
+    uint32_t _processed = 0;
 };
 
-using ResponsePtr = intrusive_ptr<Response>;
-
-inline ResponsePtr make_response() noexcept
+[[nodiscard]] inline intrusive_ptr<Response> make_response(int minor_version, bool keep_alive) noexcept
 {
-    return ResponseCache::get_intrusive();
+    if (auto resp = ResponseCache::get_intrusive(); resp) {
+        resp->_minor_version = minor_version;
+        resp->_keep_alive = keep_alive;
+        return resp;
+    }
+
+    return nullptr;
 }
 
 } // namespace sniper::http::server2

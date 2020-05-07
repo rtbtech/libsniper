@@ -87,7 +87,7 @@ private:
     pico::RequestCache::unique _pico = pico::RequestCache::get_unique_empty();
 };
 
-intrusive_ptr<Connection> make_connection() noexcept;
+[[nodiscard]] intrusive_ptr<Connection> make_connection() noexcept;
 
 [[nodiscard]] bool parse_buffer(const Config& config, const intrusive_ptr<Buffer>& buf, size_t& processed,
                                 vector<tuple<intrusive_ptr<Request>, intrusive_ptr<Response>>>& user,
