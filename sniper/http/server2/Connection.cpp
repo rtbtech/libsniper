@@ -50,9 +50,7 @@ void Connection::clear() noexcept
     _sent = 0;
     _processed = 0;
 
-    _read_head = true;
-    _buf_head.reset();
-    _buf_body.reset();
+    _buf.reset();
     _out.clear();
     _user.clear();
     _pico.reset();
@@ -83,10 +81,10 @@ void Connection::set(event::loop_ptr loop, intrusive_ptr<Pool> pool, intrusive_p
     _w_write.set(fd, ev::WRITE);
     _w_read.feed_event(0);
 
-    _buf_head = make_buffer(_config->header_max_size);
+    _buf = make_buffer(_config->buffer_size);
     _pico = pico::RequestCache::get_unique();
 
-    check(_buf_head, "Buffer is nullptr");
+    check(_buf, "Buffer is nullptr");
     check(_pico, "Pico request is nullptr");
     check(_pool->_cb, "Callback not set");
 }
@@ -132,13 +130,7 @@ void Connection::cb_read(ev::io& w, int revents) noexcept
     if (_closed)
         return;
 
-    while (true) {
-        if (_read_head && !cb_read_head(w))
-            break;
-
-        if (!_read_head && !cb_read_body(w))
-            break;
-    }
+    while (cb_read_head(w)) {}
 
     if (!_closed && !_user.empty() && !_w_user.is_active()) {
         _w_user.start();
@@ -148,79 +140,15 @@ void Connection::cb_read(ev::io& w, int revents) noexcept
 
 bool Connection::cb_read_head(ev::io& w) noexcept
 {
-    if (auto state = _buf_head->read(_fd); state != BufferState::Error) {
-        // BufferState::Again or BufferState::Full
-
-        if (!parse_buffer(*_config, _buf_head, _processed, _user, _out, _pico)) {
+    if (auto state = _buf->read(_fd); state != BufferState::Error) { // BufferState::Again or BufferState::Full
+        if (!parse_buffer(*_config, _buf, _processed, _user, _out, _pico)) {
             close();
             return false;
         }
 
-        if (_pico->content_length) {
-            if (_pico->content_length <= (_buf_head->capacity() - _processed)) {
-                // Можно дочитать в этот же буффер
-                _buf_body = _buf_head;
-            }
-            else {
-                // нужен новый буффер
-                _buf_body = make_buffer(_pico->content_length, _buf_head->tail(_processed));
-                _processed = 0;
-            }
-
-            if (!_buf_body) {
-                close();
-                return false;
-            }
-
-            _read_head = false;
-        }
-        else if (_buf_head = renew_buffer(_buf_head, _processed); !_buf_head) {
+        if (_buf = renew_buffer(_buf, _config->buffer_renew_threshold, _processed); !_buf) {
             close();
             return false;
-        }
-
-        if (state == BufferState::Again)
-            return false;
-
-        return true;
-    }
-    else { // BufferState::Error
-        close();
-        return false;
-    }
-}
-
-bool Connection::cb_read_body(ev::io& w) noexcept
-{
-    auto need_size = _pico->content_length - (_buf_body->size() - _processed);
-
-    if (auto state = _buf_body->read(_fd, need_size); state != BufferState::Error) {
-        if (_pico->content_length == (_buf_body->size() - _processed)) {
-
-            auto req = make_request(_buf_head, _buf_body, std::move(_pico), _buf_body->tail(_processed));
-            auto resp = make_response();
-
-            if (!req || !resp) {
-                close();
-                return false;
-            }
-
-            if (_out.full())
-                _out.set_capacity(2 * _out.capacity());
-
-            _user.emplace_back(req, resp);
-            _out.push_back(std::move(resp));
-
-            _buf_head = make_buffer(_config->header_max_size);
-            _buf_body.reset();
-            _pico = pico::RequestCache::get_unique();
-            _processed = 0;
-            _read_head = false;
-
-            if (!_pico || !_buf_head) {
-                close();
-                return false;
-            }
         }
 
         if (state == BufferState::Again)
@@ -341,48 +269,37 @@ bool parse_buffer(const Config& config, const intrusive_ptr<Buffer>& buf, size_t
     auto data = buf->tail(processed);
 
     while (!data.empty()) {
-        // check reading head or body
         if (auto res = pico->parse(data, config.normalize, config.normalize_other);
-            res == pico::ParseResult::Complete) {
+            res == pico::ParseResult::Complete) { // request ready
 
-            // request ready
-            data.remove_prefix(pico->header_size);
-            processed += pico->header_size;
-
-            if (!pico->content_length || pico->content_length <= data.size()) {
-                intrusive_ptr<Request> req;
-
-                if (pico->content_length) {
-                    auto body = data.substr(0, pico->content_length);
-                    data.remove_prefix(pico->content_length);
-                    processed += pico->content_length;
-
-                    req = make_request(buf, std::move(pico), body);
-                }
-                else {
-                    req = make_request(buf, std::move(pico));
-                }
-
-                auto resp = make_response();
-
-                if (!req || !resp)
-                    return false;
-
-                if (out.full())
-                    out.set_capacity(2 * out.capacity());
-
-                user.emplace_back(req, resp);
-                out.push_back(std::move(resp));
-
-                if (pico = pico::RequestCache::get_unique(); !pico)
-                    return false;
+            string_view body;
+            if (pico->content_length) {
+                body = data.substr(pico->header_size, pico->content_length);
+                data.remove_prefix(pico->header_size + pico->content_length);
+                processed += pico->header_size + pico->content_length;
             }
             else {
-                return pico->content_length <= config.body_max_size;
+                data.remove_prefix(pico->header_size);
+                processed += pico->header_size;
             }
+
+            auto req = make_request(buf, std::move(pico), body);
+            auto resp = make_response();
+
+            if (!req || !resp)
+                return false;
+
+            if (out.full())
+                out.set_capacity(2 * out.capacity());
+
+            user.emplace_back(req, resp);
+            out.push_back(std::move(resp));
+
+            if (pico = pico::RequestCache::get_unique(); !pico)
+                return false;
         }
         else {
-            break;
+            return res != pico::ParseResult::Err;
         }
     }
 

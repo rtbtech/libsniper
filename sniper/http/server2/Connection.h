@@ -83,11 +83,7 @@ private:
     uint32_t _sent = 0;
     size_t _processed = 0;
 
-
-    bool _read_head = true;
-    intrusive_ptr<Buffer> _buf_head;
-    intrusive_ptr<Buffer> _buf_body;
-
+    intrusive_ptr<Buffer> _buf;
     boost::circular_buffer<intrusive_ptr<Response>> _out;
     vector<tuple<intrusive_ptr<Request>, intrusive_ptr<Response>>> _user;
     pico::RequestCache::unique _pico = pico::RequestCache::get_unique_empty();

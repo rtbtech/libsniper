@@ -48,25 +48,18 @@ struct Request final : public intrusive_cache_unsafe_ref_counter<Request, Reques
     [[nodiscard]] const small_vector<pair_sv, pico::MAX_PARAMS>& params() const noexcept;
 
 private:
-    friend intrusive_ptr<Request> make_request(intrusive_ptr<Buffer> head, pico::RequestCache::unique&& pico,
+    friend intrusive_ptr<Request> make_request(intrusive_ptr<Buffer> buf, pico::RequestCache::unique&& pico,
                                                string_view body) noexcept;
-    friend intrusive_ptr<Request> make_request(intrusive_ptr<Buffer> head_buf, intrusive_ptr<Buffer> body_buf,
-                                               pico::RequestCache::unique&& pico, string_view body) noexcept;
-
 
     string_view _body;
-    intrusive_ptr<Buffer> _head_buf;
-    intrusive_ptr<Buffer> _body_buf;
+    intrusive_ptr<Buffer> _buf;
     pico::RequestCache::unique _pico = pico::RequestCache::get_unique_empty();
 
     static_vector<pair_sv, pico::MAX_HEADERS> _empty_headers;
     small_vector<pair_sv, pico::MAX_PARAMS> _empty_params;
 };
 
-intrusive_ptr<Request> make_request(intrusive_ptr<Buffer> head, pico::RequestCache::unique&& pico,
+intrusive_ptr<Request> make_request(intrusive_ptr<Buffer> buf, pico::RequestCache::unique&& pico,
                                     string_view body = {}) noexcept;
-
-intrusive_ptr<Request> make_request(intrusive_ptr<Buffer> head_buf, intrusive_ptr<Buffer> body_buf,
-                                    pico::RequestCache::unique&& pico, string_view body) noexcept;
 
 } // namespace sniper::http::server2

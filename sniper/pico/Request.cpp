@@ -64,6 +64,7 @@ small_vector<pair_sv, MAX_PARAMS> parse_qs(string_view qs)
 
 void Request::clear() noexcept
 {
+    head_parsed = false;
     header_size = 0;
     content_length = 0;
     keep_alive = false;
@@ -82,6 +83,21 @@ ParseResult Request::parse(char* data, size_t size) noexcept
 }
 
 ParseResult Request::parse(string_view buf, bool normalize, bool normalize_other) noexcept
+{
+    if (!head_parsed) {
+        if (auto rc = parse_head(buf, normalize, normalize_other); rc != ParseResult::Complete)
+            return rc;
+
+        head_parsed = true;
+    }
+
+    if (buf.size() >= header_size + content_length)
+        return ParseResult::Complete;
+
+    return ParseResult::Partial;
+}
+
+ParseResult Request::parse_head(string_view buf, bool normalize, bool normalize_other) noexcept
 {
     if (buf.empty())
         return ParseResult::Err;

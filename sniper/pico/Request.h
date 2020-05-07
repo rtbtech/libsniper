@@ -28,7 +28,9 @@ struct Request final
     void clear() noexcept;
     [[nodiscard]] ParseResult parse(char* data, size_t size) noexcept;
     [[nodiscard]] ParseResult parse(string_view buf, bool normalize = true, bool normalize_vals = true) noexcept;
+    [[nodiscard]] ParseResult parse_head(string_view buf, bool normalize = true, bool normalize_vals = true) noexcept;
 
+    bool head_parsed = false;
     size_t header_size = 0;
     size_t content_length = 0;
     bool keep_alive = false;

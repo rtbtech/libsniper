@@ -21,6 +21,8 @@ namespace sniper::http {
 void Buffer::clear() noexcept
 {
     _size = 0;
+    _capacity = 0;
+    _data.reset();
 }
 
 bool Buffer::reserve(size_t s) noexcept
@@ -35,6 +37,7 @@ bool Buffer::reserve(size_t s) noexcept
 
     return _capacity;
 }
+
 size_t Buffer::capacity() const noexcept
 {
     return _capacity;
@@ -44,6 +47,11 @@ size_t Buffer::size() const noexcept
 {
     return _size;
 }
+
+//size_t Buffer::exceed() const noexcept
+//{
+//    return _size >= (_capacity - _capacity / _threshold);
+//}
 
 BufferState Buffer::read(int fd, uint32_t max_size) noexcept
 {
@@ -71,28 +79,22 @@ BufferState Buffer::read(int fd, uint32_t max_size) noexcept
     }
 }
 
-intrusive_ptr<Buffer> make_buffer(uint32_t size) noexcept
+intrusive_ptr<Buffer> make_buffer(size_t size, string_view src) noexcept
 {
-    if (auto dst = BufferCache::get_intrusive(); dst->reserve(size))
-        return dst;
-
-    return nullptr;
-}
-
-intrusive_ptr<Buffer> make_buffer(uint32_t size, string_view src) noexcept
-{
-    if (src.size() > size)
-        size = src.size();
-
     if (auto dst = BufferCache::get_intrusive(); dst->reserve(size)) {
         if (!src.empty()) {
-            memcpy(dst->_data->data(), src.data(), src.size());
-            dst->_size = src.size();
+            memcpy(dst->_data->data(), src.data(), std::min(src.size(), size));
+            dst->_size = std::min(src.size(), size);
         }
         return dst;
     }
 
     return nullptr;
+}
+
+intrusive_ptr<Buffer> make_buffer(const intrusive_ptr<Buffer>& buf, size_t processed) noexcept
+{
+    return make_buffer(buf->_capacity, buf->tail(processed));
 }
 
 string_view Buffer::tail(size_t processed) const noexcept
@@ -114,27 +116,13 @@ bool Buffer::fill(string_view data) noexcept
     return false;
 }
 
-intrusive_ptr<Buffer> renew_buffer(const intrusive_ptr<Buffer>& buf, size_t& processed) noexcept
+intrusive_ptr<Buffer> renew_buffer(const intrusive_ptr<Buffer>& buf, size_t threshold, size_t& processed) noexcept
 {
-    // если есть хвост
-    if (buf->size() > processed) {
-        // если это не первый запрос в буфере
-        // то переносим его в новый буфер
-        if (processed) {
-            auto new_buf = make_buffer(buf->capacity(), buf->tail(processed));
-            processed = 0;
-            return new_buf;
-        }
-        else if (buf->size() == buf->capacity()) {
-            // Если буфер полон и там всего один запрос.
-            // запрос не поместился в буфер - закрываем соединение
-            return nullptr;
-        }
-        // иначе - ничего не делаем - продолжаем читать в этот же буфер
-    }
-    else { // если хвоста нет - просто обнуляем буфер
+    if (buf->size() >= (buf->capacity() - buf->capacity() / threshold)) {
+        // если в буффере осталось места < N%, то выделяем новый и копируем в него хвост
+        auto new_buf = make_buffer(buf, processed);
         processed = 0;
-        return make_buffer(buf->capacity());
+        return new_buf;
     }
 
     return buf;
