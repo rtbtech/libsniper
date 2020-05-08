@@ -13,6 +13,10 @@ Currently libsniper is successfully used by several companies:
 * Client/Server library
 * Graceful server shutdown
 
+#### [TechEmpower benchmark](https://github.com/TechEmpower/FrameworkBenchmarks/tree/master/frameworks/C%2B%2B/libsniper)
+
+
+
 #### Performance
 **CPU**: 2x Intel Xeon CPU E5-2630 v4 @ 2.20GHz
 
