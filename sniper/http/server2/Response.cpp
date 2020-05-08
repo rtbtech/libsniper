@@ -51,6 +51,7 @@ void Response::clear() noexcept
     _iov.clear();
     _processed = 0;
     _total_size = 0;
+    _date.reset();
 }
 
 void Response::add_header_copy(string_view header)
@@ -122,6 +123,10 @@ bool Response::set_ready() noexcept
     else if (!_keep_alive) {
         _headers.emplace_back(connection_close, cache::StringCache::get_unique_empty());
     }
+
+    // Date
+    if (_date)
+        _headers.emplace_back(*_date, cache::StringCache::get_unique_empty());
 
     // last header - content length
     if (!std::get<string_view>(_data).empty()) {

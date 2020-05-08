@@ -24,6 +24,20 @@
 
 namespace sniper::http {
 
+namespace {
+
+local_ptr<string> gen_date() noexcept
+{
+    try {
+        return make_local<string>(fmt::format("Date: {:%a, %d %b %Y %H:%M:%S} GMT\r\n", fmt::gmtime(time(nullptr))));
+    }
+    catch (...) {
+        return nullptr;
+    }
+}
+
+} // namespace
+
 Server2::Server2(event::loop_ptr loop, intrusive_ptr<server2::Config> config) :
     _loop(std::move(loop)), _config(std::move(config))
 {
@@ -36,10 +50,17 @@ Server2::Server2(event::loop_ptr loop, intrusive_ptr<server2::Config> config) :
 
     _pool = make_intrusive<server2::Pool>(_config->max_conns);
     check(_pool, "[Server] pool is nullptr");
+
+    _w_date.set(*_loop);
+    _w_date.set<Server2, &Server2::cb_date>(this);
+    _w_date.start(1.0, 1.0);
+    _pool->date = gen_date();
 }
 
 Server2::~Server2() noexcept
 {
+    _w_date.stop();
+
     for (auto& w : _w_accept)
         if (w->is_active()) {
             w->stop();
@@ -103,6 +124,11 @@ void Server2::cb_accept(ev::io& w, int revents) noexcept
             return;
         }
     }
+}
+
+void Server2::cb_date(ev::timer& w, int revents) noexcept
+{
+    _pool->date = gen_date();
 }
 
 } // namespace sniper::http

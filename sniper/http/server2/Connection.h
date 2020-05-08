@@ -74,6 +74,7 @@ private:
     int _fd = -1;
     bool _closed = true;
     size_t _processed = 0;
+    string _server_name_header;
 
     ev::io _w_read;
     ev::io _w_write;

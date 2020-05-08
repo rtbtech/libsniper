@@ -64,6 +64,9 @@ void Connection::set(event::loop_ptr loop, intrusive_ptr<Pool> pool, intrusive_p
     _fd = fd;
     _closed = false;
 
+    if (_config->add_server_header && !_config->server_name.empty())
+        _server_name_header = fmt::format("Server: {}\r\n", _config->server_name);
+
     _w_read.set(*_loop);
     _w_write.set(*_loop);
     _w_close.set(*_loop);
@@ -265,6 +268,12 @@ void Connection::cb_keep_alive_timeout(ev::timer& w, int revents) noexcept
 void Connection::send(const intrusive_ptr<Response>& resp) noexcept
 {
     if (resp && !_closed) {
+        if (_config->add_server_header)
+            resp->add_header_nocopy(_server_name_header);
+
+        if (_config->add_date_header)
+            resp->_date = _pool->date;
+
         if (!resp->set_ready()) {
             if (!_w_close.is_active()) {
                 _w_close.start();

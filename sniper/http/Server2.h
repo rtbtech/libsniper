@@ -41,8 +41,10 @@ public:
 
 private:
     void cb_accept(ev::io& w, [[maybe_unused]] int revents) noexcept;
+    void cb_date(ev::timer& w, [[maybe_unused]] int revents) noexcept;
 
     event::loop_ptr _loop;
+    ev::timer _w_date;
     intrusive_ptr<server2::Config> _config;
     list<unique_ptr<ev::io>> _w_accept;
     intrusive_ptr<server2::Pool> _pool;

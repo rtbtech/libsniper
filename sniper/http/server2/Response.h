@@ -71,6 +71,7 @@ private:
     small_vector<iovec, 35> _iov;
     uint32_t _processed = 0;
     uint32_t _total_size = 0;
+    local_ptr<string> _date;
 };
 
 [[nodiscard]] inline intrusive_ptr<Response> make_response(int minor_version, bool keep_alive) noexcept

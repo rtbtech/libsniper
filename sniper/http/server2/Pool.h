@@ -37,6 +37,7 @@ struct Pool final : public intrusive_unsafe_ref_counter<Pool>
 
     unordered_map<Connection*, intrusive_ptr<Connection>> _conns;
     function<void(const intrusive_ptr<Connection>&, const intrusive_ptr<Request>&, const intrusive_ptr<Response>&)> _cb;
+    local_ptr<string> date;
 };
 
 } // namespace sniper::http::server2

@@ -144,10 +144,10 @@ void Response::set_ready() noexcept
         str->append("\r\n");
 
         _chunks.emplace_back(*str, std::move(str));
-    } else {
+    }
+    else {
         _chunks.emplace_back(content_length_0, cache::StringCache::get_unique_empty());
     }
-
 
     // last header
     if (!_keep_alive)
