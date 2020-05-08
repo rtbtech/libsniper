@@ -296,7 +296,7 @@ bool parse_buffer(const Config& config, const intrusive_ptr<Buffer>& buf, size_t
     auto data = buf->tail(processed);
 
     while (!data.empty()) {
-        if (auto res = pico->parse(data, config.normalize, config.normalize_other);
+        if (auto res = pico->parse(data, config.request_max_size, config.normalize, config.normalize_other);
             res == pico::ParseResult::Complete) { // request ready
 
             string_view body;

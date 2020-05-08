@@ -79,14 +79,21 @@ void Request::clear() noexcept
 
 ParseResult Request::parse(char* data, size_t size) noexcept
 {
-    return parse(string_view(data, size));
+    return parse(string_view(data, size), 0, true, true);
 }
 
-ParseResult Request::parse(string_view buf, bool normalize, bool normalize_other) noexcept
+ParseResult Request::parse(string_view buf, size_t max_size, bool normalize, bool normalize_other) noexcept
 {
     if (!head_parsed) {
-        if (auto rc = parse_head(buf, normalize, normalize_other); rc != ParseResult::Complete)
+        if (auto rc = parse_head(buf, normalize, normalize_other); rc != ParseResult::Complete) {
+            if (max_size && buf.size() >= max_size)
+                return ParseResult::Err;
+
             return rc;
+        }
+
+        if (max_size && (header_size + content_length) > max_size)
+            return ParseResult::Err;
 
         head_parsed = true;
     }
