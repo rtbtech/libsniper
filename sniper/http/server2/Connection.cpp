@@ -27,10 +27,26 @@
 
 namespace sniper::http::server2 {
 
-Connection::Connection()
+Connection::Connection(event::loop_ptr loop, intrusive_ptr<Pool> pool, intrusive_ptr<Config> config) :
+    _loop(std::move(loop)), _pool(std::move(pool)), _config(std::move(config))
 {
+    check(_loop, "Loop is nullptr");
+    check(_pool, "Pool is nullptr");
+    check(_pool->_cb, "Callback not set");
+    check(_config, "Config is nullptr");
+
+    if (_config->add_server_header && !_config->server_name.empty())
+        _server_name_header = fmt::format("Server: {}\r\n", _config->server_name);
+
+
     _out.set_capacity(128);
     _user.reserve(128);
+
+    _w_read.set(*_loop);
+    _w_write.set(*_loop);
+    _w_close.set(*_loop);
+    _w_user.set(*_loop);
+    _w_keep_alive_timeout.set(*_loop);
 
     _w_read.set<Connection, &Connection::cb_read>(this);
     _w_write.set<Connection, &Connection::cb_write>(this);
@@ -39,64 +55,34 @@ Connection::Connection()
     _w_keep_alive_timeout.set<Connection, &Connection::cb_keep_alive_timeout>(this);
 }
 
-void Connection::clear() noexcept
-{
-    _loop.reset();
-    _pool.reset();
-    _fd = -1;
-    _closed = true;
-    _processed = 0;
-
-    _buf.reset();
-    _out.clear();
-    _user.clear();
-    _pico.reset();
-}
-
 net::Peer Connection::peer() const noexcept
 {
     return _peer;
 }
 
-void Connection::set(event::loop_ptr loop, intrusive_ptr<Pool> pool, intrusive_ptr<Config> config, net::Peer peer,
-                     int fd) noexcept
+void Connection::set(net::Peer peer, int fd) noexcept
 {
-    _loop = std::move(loop);
-    _pool = std::move(pool);
-    _config = std::move(config);
-    check(_pool, "Pool is nullptr");
-    check(_config, "Config is nullptr");
-
     _peer = peer;
     _fd = fd;
     _closed = false;
-
-    if (_config->add_server_header && !_config->server_name.empty())
-        _server_name_header = fmt::format("Server: {}\r\n", _config->server_name);
-
-    _w_read.set(*_loop);
-    _w_write.set(*_loop);
-    _w_close.set(*_loop);
-    _w_user.set(*_loop);
-    _w_keep_alive_timeout.set(*_loop);
 
     if (_config->keep_alive_timeout > 0ms) {
         double to_d = (double)duration_cast<milliseconds>(_config->keep_alive_timeout).count() / 1000.0;
         _w_keep_alive_timeout.start(to_d, to_d);
     }
 
-    _w_read.start(fd, ev::READ);
-    _w_write.set(fd, ev::WRITE);
-    _w_read.feed_event(0);
-
     _buf = make_buffer(_config->buffer_size);
     _pico = pico::RequestCache::get_unique();
 
-    check(_buf, "Buffer is nullptr");
-    check(_pico, "Pico request is nullptr");
-    check(_pool->_cb, "Callback not set");
-}
+    if (!_buf || !_pico) {
+        close();
+        return;
+    }
 
+    _w_read.start(fd, ev::READ);
+    _w_write.set(fd, ev::WRITE);
+    _w_read.feed_event(0);
+}
 
 // internal call only from async callbacks
 void Connection::close() noexcept
@@ -106,17 +92,20 @@ void Connection::close() noexcept
     _w_close.stop();
     _w_user.stop();
     _w_keep_alive_timeout.stop();
+
     ::close(_fd);
     _closed = true;
+    _fd = -1;
+    _closed = true;
+    _processed = 0;
 
     _out.clear();
     _user.clear();
+    _buf.reset();
+    _pico.reset();
 
-    if (_pool) {
-        auto p = _pool;
-        _pool.reset();
-        p->detach(this);
-    }
+    if (_pool)
+        _pool->disconnect(this);
 }
 
 // call from user
@@ -217,7 +206,6 @@ WriteState Connection::cb_writev_int(ev::io& w) noexcept
     return WriteState::Stop;
 }
 
-
 void Connection::cb_write(ev::io& w, int revents) noexcept
 {
     if (_closed)
@@ -299,10 +287,10 @@ void Connection::send(const intrusive_ptr<Response>& resp) noexcept
 // call from pool close
 void Connection::detach() noexcept
 {
-    if (!_closed) {
-        _pool.reset();
+    _pool.reset();
+
+    if (!_closed)
         close();
-    }
 }
 
 bool parse_buffer(const Config& config, const intrusive_ptr<Buffer>& buf, size_t& processed,
@@ -347,11 +335,6 @@ bool parse_buffer(const Config& config, const intrusive_ptr<Buffer>& buf, size_t
     }
 
     return true;
-}
-
-intrusive_ptr<Connection> make_connection() noexcept
-{
-    return ConnectionCache::get_intrusive();
 }
 
 } // namespace sniper::http::server2

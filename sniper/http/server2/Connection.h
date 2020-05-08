@@ -46,15 +46,12 @@ struct Pool;
 struct Request;
 struct Response;
 struct Connection;
-using ConnectionCache = cache::STDCache<Connection>;
 
-struct Connection final : public intrusive_cache_unsafe_ref_counter<Connection, ConnectionCache>
+struct Connection final : public intrusive_unsafe_ref_counter<Connection>
 {
-    Connection();
+    Connection(event::loop_ptr loop, intrusive_ptr<Pool> pool, intrusive_ptr<Config> config);
 
-    void clear() noexcept;
-    void set(event::loop_ptr loop, intrusive_ptr<Pool> pool, intrusive_ptr<Config> config, net::Peer peer,
-             int fd) noexcept;
+    void set(net::Peer peer, int fd) noexcept;
     void send(const intrusive_ptr<Response>& resp) noexcept;
 
     void detach() noexcept;
@@ -92,8 +89,6 @@ private:
     vector<tuple<intrusive_ptr<Request>, intrusive_ptr<Response>>> _user;
     pico::RequestCache::unique _pico = pico::RequestCache::get_unique_empty();
 };
-
-[[nodiscard]] intrusive_ptr<Connection> make_connection() noexcept;
 
 [[nodiscard]] bool parse_buffer(const Config& config, const intrusive_ptr<Buffer>& buf, size_t& processed,
                                 vector<tuple<intrusive_ptr<Request>, intrusive_ptr<Response>>>& user,

@@ -16,27 +16,33 @@
 
 #pragma once
 
+#include <sniper/event/Loop.h>
 #include <sniper/std/functional.h>
 #include <sniper/std/map.h>
 #include <sniper/std/memory.h>
+#include <sniper/std/vector.h>
 
 namespace sniper::http::server2 {
 
+struct Config;
 struct Connection;
 struct Request;
 struct Response;
 
 struct Pool final : public intrusive_unsafe_ref_counter<Pool>
 {
-    explicit Pool(size_t max_conns);
+    explicit Pool(intrusive_ptr<Config> config);
     ~Pool();
 
-    intrusive_ptr<Connection> get() noexcept;
-    void detach(Connection* conn) noexcept;
+    intrusive_ptr<Connection> get(const event::loop_ptr& loop, const intrusive_ptr<Pool>& pool) noexcept;
+    void disconnect(Connection* conn) noexcept;
     void close() noexcept;
 
+    intrusive_ptr<Config> _config;
     unordered_map<Connection*, intrusive_ptr<Connection>> _conns;
+    vector<intrusive_ptr<Connection>> _free_conns;
     function<void(const intrusive_ptr<Connection>&, const intrusive_ptr<Request>&, const intrusive_ptr<Response>&)> _cb;
+
     local_ptr<string> date;
 };
 

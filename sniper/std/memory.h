@@ -63,6 +63,12 @@ inline intrusive_ptr<T> make_intrusive(_Args&&... __args)
     return intrusive_ptr<T>(new T(std::forward<_Args>(__args)...));
 }
 
+template<typename T, typename... _Args>
+inline intrusive_ptr<T> make_intrusive_noexcept(_Args&&... __args) noexcept
+{
+    return intrusive_ptr<T>(new (std::nothrow) T(std::forward<_Args>(__args)...));
+}
+
 } // namespace sniper
 
 namespace std {

@@ -45,10 +45,9 @@ Server2::Server2(event::loop_ptr loop, intrusive_ptr<server2::Config> config) :
 
     if (!_config)
         _config = server2::make_config();
-
     check(_config, "[Server] config is nullptr");
 
-    _pool = make_intrusive<server2::Pool>(_config->max_conns);
+    _pool = make_intrusive<server2::Pool>(_config);
     check(_pool, "[Server] pool is nullptr");
 
     _w_date.set(*_loop);
@@ -105,8 +104,8 @@ void Server2::cb_accept(ev::io& w, int revents) noexcept
             net::socket::tcp::set_defer_accept(fd);
             net::socket::tcp::set_fastopen(fd);
 
-            if (auto conn = _pool->get(); conn) {
-                conn->set(_loop, _pool, _config, peer, fd);
+            if (auto conn = _pool->get(_loop, _pool); conn) {
+                conn->set(peer, fd);
                 continue;
             }
 

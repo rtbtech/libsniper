@@ -15,16 +15,18 @@
  */
 
 #include <sniper/http/Buffer.h>
-#include <sniper/http/server2/Connection.h>
-#include <sniper/http/server2/Request.h>
-#include <sniper/http/server2/Response.h>
 #include "Pool.h"
+#include "Config.h"
+#include "Connection.h"
+#include "Request.h"
+#include "Response.h"
 
 namespace sniper::http::server2 {
 
-Pool::Pool(size_t max_conns)
+Pool::Pool(intrusive_ptr<Config> config) : _config(std::move(config))
 {
-    _conns.reserve(max_conns);
+    _conns.reserve(_config->max_conns);
+    _free_conns.reserve(_config->max_free_conns);
 }
 
 Pool::~Pool()
@@ -33,9 +35,16 @@ Pool::~Pool()
 }
 
 // call from server accept
-intrusive_ptr<Connection> Pool::get() noexcept
+intrusive_ptr<Connection> Pool::get(const event::loop_ptr& loop, const intrusive_ptr<Pool>& pool) noexcept
 {
-    if (auto conn = make_connection(); conn) {
+    if (!_free_conns.empty()) {
+        auto conn = _free_conns.back();
+        _free_conns.pop_back();
+        _conns.emplace(conn.get(), conn);
+        return conn;
+    }
+
+    if (auto conn = make_intrusive_noexcept<Connection>(loop, pool, _config); conn) {
         _conns.emplace(conn.get(), conn);
         return conn;
     }
@@ -46,17 +55,25 @@ intrusive_ptr<Connection> Pool::get() noexcept
 // call from Server destructor or from self destructor
 void Pool::close() noexcept
 {
+    for (auto& e : _free_conns)
+        e->detach();
+
     for (auto& e : _conns)
         e.first->detach();
 
+    _free_conns.clear();
     _conns.clear();
 }
 
 // call from connection close
-void Pool::detach(Connection* conn) noexcept
+void Pool::disconnect(Connection* conn) noexcept
 {
-    if (auto it = _conns.find(conn); it != _conns.end())
+    if (auto it = _conns.find(conn); it != _conns.end()) {
+        if (_free_conns.size() < _config->max_free_conns)
+            _free_conns.emplace_back(std::move(it->second));
+
         _conns.erase(conn);
+    }
 }
 
 } // namespace sniper::http::server2
