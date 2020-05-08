@@ -15,13 +15,17 @@ set(LIB_SRC
     Wait.cpp
     Buffer.h
     Buffer.cpp
-    server/Config.h
+    server/ServerInt.h
+    server/ServerInt.cpp
     server/Connection.h
     server/Connection.cpp
+    server/Pool.h
+    server/Pool.cpp
     server/Request.h
     server/Request.cpp
     server/Response.h
     server/Response.cpp
+    server/Config.h
     server/Status.h
     server/Status.cpp
     client/Connection.h
@@ -35,20 +39,6 @@ set(LIB_SRC
     client/Pool.cpp
     wait/Group.h
     wait/Group.cpp
-
-    Server2.h
-    Server2.cpp
-    server2/ServerInt.h
-    server2/ServerInt.cpp
-    server2/Connection.h
-    server2/Connection.cpp
-    server2/Pool.h
-    server2/Pool.cpp
-    server2/Request.h
-    server2/Request.cpp
-    server2/Response.h
-    server2/Response.cpp
-    server2/Config.h
     )
 
 #Library

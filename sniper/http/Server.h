@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 - 2019, MetaHash, Oleg Romanenko (oleg@romanenko.ro)
+ * Copyright (c) 2020, RTBtech, MediaSniper, Oleg Romanenko (oleg@romanenko.ro)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,59 +16,44 @@
 
 #pragma once
 
+#include <sniper/cache/Cache.h>
 #include <sniper/event/Loop.h>
 #include <sniper/http/server/Config.h>
 #include <sniper/http/server/Connection.h>
+#include <sniper/http/server/Pool.h>
 #include <sniper/http/server/Request.h>
 #include <sniper/http/server/Response.h>
-#include <sniper/std/functional.h>
 #include <sniper/std/list.h>
-#include <sniper/std/string.h>
 
 namespace sniper::http {
 
 class Server final
 {
 public:
-    explicit Server(event::loop_ptr loop, server::Config config = {});
+    explicit Server(event::loop_ptr loop, intrusive_ptr<server::Config> config = nullptr);
     ~Server() noexcept;
 
-    [[nodiscard]] bool bind(uint16_t port, bool ssl = false) noexcept;
-    [[nodiscard]] bool bind(const string& ip, uint16_t port, bool ssl = false) noexcept;
-
     template<typename T>
-    void set_cb_request(T&& cb);
+    void set_cb(T&& cb);
+
+    [[nodiscard]] bool bind(uint16_t port) noexcept;
+    [[nodiscard]] bool bind(const string& ip, uint16_t port) noexcept;
 
 private:
-    struct ServerIO : public ev::io
-    {
-        bool ssl = false;
-    };
-
-    [[nodiscard]] intrusive_ptr<server::Connection> get_conn();
     void cb_accept(ev::io& w, [[maybe_unused]] int revents) noexcept;
-    void cb_clean(ev::timer& w, [[maybe_unused]] int revents) noexcept;
+    void cb_date(ev::timer& w, [[maybe_unused]] int revents) noexcept;
 
     event::loop_ptr _loop;
-    server::Config _config;
-
-    function<void(const intrusive_ptr<server::Connection>&, const intrusive_ptr<server::Request>&,
-                  const intrusive_ptr<server::Response>&)>
-        _cb_request;
-
-    ev::timer _w_clean;
-    list<unique_ptr<ServerIO>> _w_accept;
-    list<intrusive_ptr<server::Connection>> _conns;
-
-    // use only refcount=1 pointers from this list
-    // or create new conn
-    list<intrusive_ptr<server::Connection>> _free_conns;
+    ev::timer _w_date;
+    intrusive_ptr<server::Config> _config;
+    list<unique_ptr<ev::io>> _w_accept;
+    intrusive_ptr<server::Pool> _pool;
 };
 
 template<typename T>
-void Server::set_cb_request(T&& cb)
+void Server::set_cb(T&& cb)
 {
-    _cb_request = std::forward<T>(cb);
+    _pool->_cb = std::forward<T>(cb);
 }
 
 } // namespace sniper::http

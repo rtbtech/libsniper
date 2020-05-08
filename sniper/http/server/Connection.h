@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 - 2019, MetaHash, Oleg Romanenko (oleg@romanenko.ro)
+ * Copyright (c) 2020, RTBtech, MediaSniper, Oleg Romanenko (oleg@romanenko.ro)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,83 +16,83 @@
 
 #pragma once
 
+#include <boost/circular_buffer.hpp>
+#include <sniper/cache/Cache.h>
 #include <sniper/event/Loop.h>
 #include <sniper/http/server/Config.h>
 #include <sniper/net/Peer.h>
-#include <sniper/std/deque.h>
-#include <sniper/std/functional.h>
+#include <sniper/pico/Request.h>
 #include <sniper/std/memory.h>
-#include <sniper/std/optional.h>
+#include <sniper/std/string.h>
+#include <sniper/std/tuple.h>
 #include <sniper/std/vector.h>
 
 namespace sniper::http {
 
-class Server;
+struct Buffer;
 
 } // namespace sniper::http
 
 namespace sniper::http::server {
 
-class Request;
-class Response;
-
-enum class ConnectionStatus
+enum class WriteState
 {
-    Ready,
-    Pending,
-    Closed
+    Stop,
+    Again,
+    Error
 };
 
-class Connection final : public intrusive_unsafe_ref_counter<Connection>
+struct Pool;
+struct Request;
+struct Response;
+struct Connection;
+
+struct Connection final : public intrusive_unsafe_ref_counter<Connection>
 {
-public:
-    Connection(event::loop_ptr loop, ConnectionConfig config,
-               const function<void(const intrusive_ptr<Connection>&, const intrusive_ptr<Request>&,
-                                   const intrusive_ptr<Response>&)>& cb);
-    ~Connection() noexcept;
+    Connection(event::loop_ptr loop, intrusive_ptr<Pool> pool, intrusive_ptr<Config> config);
 
-    void disconnect() noexcept;
-
-    [[nodiscard]] ConnectionStatus status() const noexcept;
-    [[nodiscard]] net::Peer peer() const noexcept;
-
+    void set(net::Peer peer, int fd) noexcept;
     void send(const intrusive_ptr<Response>& resp) noexcept;
 
+    void detach() noexcept;
+    void disconnect() noexcept;
+
+    [[nodiscard]] net::Peer peer() const noexcept;
+
 private:
-    friend class sniper::http::Server;
-
-    [[nodiscard]] bool accept(int fd, net::Peer peer, bool ssl) noexcept;
-
-    void cb_prepare(ev::prepare& w, [[maybe_unused]] int revents);
+    void cb_keep_alive_timeout(ev::timer& w, [[maybe_unused]] int revents) noexcept;
     void cb_read(ev::io& w, [[maybe_unused]] int revents) noexcept;
     void cb_write(ev::io& w, [[maybe_unused]] int revents) noexcept;
-    [[nodiscard]] bool write_int() noexcept;
-    void cb_keep_alive_timeout(ev::timer& w, [[maybe_unused]] int revents) noexcept;
-    void cb_request_read_timeout(ev::timer& w, [[maybe_unused]] int revents) noexcept;
+    void cb_close(ev::prepare& w, [[maybe_unused]] int revents) noexcept;
+    void cb_user(ev::prepare& w, [[maybe_unused]] int revents) noexcept;
+    WriteState cb_writev_int(ev::io& w) noexcept;
+
     void close() noexcept;
 
     event::loop_ptr _loop;
-    ConnectionConfig _config;
-
-    const function<void(const intrusive_ptr<Connection>&, const intrusive_ptr<Request>&,
-                        const intrusive_ptr<Response>&)>& _cb;
+    intrusive_ptr<Pool> _pool;
+    intrusive_ptr<Config> _config;
+    net::Peer _peer;
+    int _fd = -1;
+    bool _closed = true;
+    size_t _processed = 0;
+    string _server_name_header;
 
     ev::io _w_read;
     ev::io _w_write;
-    ev::prepare _w_prepare;
+    ev::prepare _w_close;
+    ev::prepare _w_user;
     ev::timer _w_keep_alive_timeout;
-    ev::timer _w_request_read_timeout;
 
-    net::Peer _peer;
-    ConnectionStatus _status = ConnectionStatus::Closed;
-
-    intrusive_ptr<Request> _in;
-    deque<intrusive_ptr<Response>> _out;
-    vector<tuple<intrusive_ptr<Request>, intrusive_ptr<Response>>> _user_cb;
-
-    uint64_t _req_count = 0;
-    bool _req_in_progress = false;
-    optional<uint64_t> _prev_req_count;
+    intrusive_ptr<Buffer> _buf;
+    boost::circular_buffer<intrusive_ptr<Response>> _out;
+    vector<tuple<intrusive_ptr<Request>, intrusive_ptr<Response>>> _user;
+    pico::RequestCache::unique _pico = pico::RequestCache::get_unique_empty();
 };
+
+[[nodiscard]] bool parse_buffer(const Config& config, const intrusive_ptr<Buffer>& buf, size_t& processed,
+                                vector<tuple<intrusive_ptr<Request>, intrusive_ptr<Response>>>& user,
+                                boost::circular_buffer<intrusive_ptr<Response>>& out,
+                                pico::RequestCache::unique& pico) noexcept;
 
 } // namespace sniper::http::server

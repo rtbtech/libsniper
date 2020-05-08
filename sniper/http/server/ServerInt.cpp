@@ -19,7 +19,7 @@
 #include <unistd.h>
 #include "ServerInt.h"
 
-namespace sniper::http::server2::internal {
+namespace sniper::http::server::internal {
 
 int create_socket(const string& ip, uint16_t port, uint32_t send_buf, uint32_t recv_buf, int backlog) noexcept
 {
@@ -66,4 +66,4 @@ int create_socket(const string& ip, uint16_t port, uint32_t send_buf, uint32_t r
     return fd;
 }
 
-} // namespace sniper::http::server2::internal
+} // namespace sniper::http::server::internal

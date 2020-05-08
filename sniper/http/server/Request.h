@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 - 2019, MetaHash, Oleg Romanenko (oleg@romanenko.ro)
+ * Copyright (c) 2020, RTBtech, MediaSniper, Oleg Romanenko (oleg@romanenko.ro)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,30 +16,23 @@
 
 #pragma once
 
-#include <sniper/cache/ArrayCache.h>
 #include <sniper/cache/Cache.h>
 #include <sniper/pico/Request.h>
 #include <sniper/std/memory.h>
-#include <sniper/std/tuple.h>
+
+namespace sniper::http {
+
+struct Buffer;
+
+} // namespace sniper::http
 
 namespace sniper::http::server {
 
-enum class RecvStatus
-{
-    Err,
-    Partial,
-    Async,
-    Complete
-};
-
-struct MessageConfig;
-class Connection;
-class Request;
+struct Request;
 using RequestCache = cache::STDCache<Request>;
 
-class Request final : public intrusive_cache_unsafe_ref_counter<Request, RequestCache>
+struct Request final : public intrusive_cache_unsafe_ref_counter<Request, RequestCache>
 {
-public:
     void clear() noexcept;
 
     [[nodiscard]] string_view data() const noexcept;
@@ -55,23 +48,18 @@ public:
     [[nodiscard]] const small_vector<pair_sv, pico::MAX_PARAMS>& params() const noexcept;
 
 private:
-    friend class Connection;
+    friend intrusive_ptr<Request> make_request(intrusive_ptr<Buffer> buf, pico::RequestCache::unique&& pico,
+                                               string_view body) noexcept;
 
-    // tail <= MessageConfig::usual_size
-    [[nodiscard]] bool init(const MessageConfig& config, string_view tail);
-    [[nodiscard]] string_view tail() const noexcept;
-    [[nodiscard]] RecvStatus recv(const MessageConfig& config, int fd) noexcept;
-    [[nodiscard]] ssize_t recv_int(const MessageConfig& config, int fd) noexcept;
-    [[nodiscard]] RecvStatus parse(const MessageConfig& config) noexcept;
+    string_view _body;
+    intrusive_ptr<Buffer> _buf;
+    pico::RequestCache::unique _pico = pico::RequestCache::get_unique_empty();
 
-    pico::Request _pico_req;
-
-    string _buf_header;
-    cache::StringCache::unique _buf_body = cache::StringCache::get_unique_empty();
-
-    size_t _read = 0;
-    size_t _processed = 0;
-    size_t _total = 0;
+    static_vector<pair_sv, pico::MAX_HEADERS> _empty_headers;
+    small_vector<pair_sv, pico::MAX_PARAMS> _empty_params;
 };
+
+[[nodiscard]] intrusive_ptr<Request> make_request(intrusive_ptr<Buffer> buf, pico::RequestCache::unique&& pico,
+                                                  string_view body = {}) noexcept;
 
 } // namespace sniper::http::server

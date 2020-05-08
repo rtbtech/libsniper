@@ -21,7 +21,7 @@
 #include "Request.h"
 #include "Response.h"
 
-namespace sniper::http::server2 {
+namespace sniper::http::server {
 
 Pool::Pool(intrusive_ptr<Config> config) : _config(std::move(config))
 {
@@ -76,4 +76,4 @@ void Pool::disconnect(Connection* conn) noexcept
     }
 }
 
-} // namespace sniper::http::server2
+} // namespace sniper::http::server

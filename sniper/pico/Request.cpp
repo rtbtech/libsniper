@@ -77,11 +77,6 @@ void Request::clear() noexcept
     params.clear();
 }
 
-ParseResult Request::parse(char* data, size_t size) noexcept
-{
-    return parse(string_view(data, size), 0, true, true);
-}
-
 ParseResult Request::parse(string_view buf, size_t max_size, bool normalize, bool normalize_other) noexcept
 {
     if (!head_parsed) {

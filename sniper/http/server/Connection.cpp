@@ -1,8 +1,5 @@
-// This is an open source non-commercial project. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
-
 /*
- * Copyright (c) 2018 - 2019, MetaHash, Oleg Romanenko (oleg@romanenko.ro)
+ * Copyright (c) 2020, RTBtech, MediaSniper, Oleg Romanenko (oleg@romanenko.ro)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,209 +14,243 @@
  * limitations under the License.
  */
 
+#include <sniper/http/Buffer.h>
 #include <sniper/log/log.h>
 #include <sniper/std/check.h>
+#include <sniper/std/string.h>
+#include <sys/uio.h>
 #include "Connection.h"
+#include "Pool.h"
 #include "Request.h"
 #include "Response.h"
 
 namespace sniper::http::server {
 
-Connection::Connection(event::loop_ptr loop, ConnectionConfig config,
-                       const function<void(const intrusive_ptr<Connection>&, const intrusive_ptr<Request>&,
-                                           const intrusive_ptr<Response>&)>& cb) :
-    _loop(std::move(loop)),
-    _config(config), _cb(cb)
+Connection::Connection(event::loop_ptr loop, intrusive_ptr<Pool> pool, intrusive_ptr<Config> config) :
+    _loop(std::move(loop)), _pool(std::move(pool)), _config(std::move(config))
 {
-    check(_loop, "[Server:Connection] loop is nullptr");
+    check(_loop, "Loop is nullptr");
+    check(_pool, "Pool is nullptr");
+    check(_pool->_cb, "Callback not set");
+    check(_config, "Config is nullptr");
+
+    if (_config->add_server_header && !_config->server_name.empty())
+        _server_name_header = fmt::format("Server: {}\r\n", _config->server_name);
+
+
+    _out.set_capacity(128);
+    _user.reserve(128);
 
     _w_read.set(*_loop);
     _w_write.set(*_loop);
-    _w_prepare.set(*_loop);
+    _w_close.set(*_loop);
+    _w_user.set(*_loop);
     _w_keep_alive_timeout.set(*_loop);
-    _w_request_read_timeout.set(*_loop);
 
     _w_read.set<Connection, &Connection::cb_read>(this);
     _w_write.set<Connection, &Connection::cb_write>(this);
-    _w_prepare.set<Connection, &Connection::cb_prepare>(this);
+    _w_close.set<Connection, &Connection::cb_close>(this);
+    _w_user.set<Connection, &Connection::cb_user>(this);
     _w_keep_alive_timeout.set<Connection, &Connection::cb_keep_alive_timeout>(this);
-    _w_request_read_timeout.set<Connection, &Connection::cb_request_read_timeout>(this);
-
-    _user_cb.reserve(100);
 }
 
-Connection::~Connection() noexcept
+net::Peer Connection::peer() const noexcept
 {
-    close();
+    return _peer;
 }
 
-ConnectionStatus Connection::status() const noexcept
+void Connection::set(net::Peer peer, int fd) noexcept
 {
-    return _status;
-}
+    _peer = peer;
+    _fd = fd;
+    _closed = false;
 
-bool Connection::accept(int fd, net::Peer peer, bool ssl) noexcept
-{
-    if (fd <= 0 || _status != ConnectionStatus::Closed)
-        return false;
-
-    try {
-        _in.reset(RequestCache::get_raw());
-    }
-    catch (...) {
-        perror("[Server:Connection] Cannot allocate memory for new request");
-        // OOM
-        return false;
-    }
-
-    if (!_in->init(_config.message, {}))
-        return false;
-
-
-    if (_config.keep_alive_timeout > 0ms) {
-        double to_d = (double)duration_cast<milliseconds>(_config.keep_alive_timeout).count() / 1000.0;
+    if (_config->keep_alive_timeout > 0ms) {
+        double to_d = (double)duration_cast<milliseconds>(_config->keep_alive_timeout).count() / 1000.0;
         _w_keep_alive_timeout.start(to_d, to_d);
     }
 
-    if (_config.request_read_timeout > 0ms) {
-        double to_d = (double)duration_cast<milliseconds>(_config.request_read_timeout).count() / 1000.0;
-        _w_request_read_timeout.start(to_d, to_d);
-    }
+    _buf = make_buffer(_config->buffer_size);
+    _pico = pico::RequestCache::get_unique();
 
+    if (!_buf || !_pico) {
+        close();
+        return;
+    }
 
     _w_read.start(fd, ev::READ);
     _w_write.set(fd, ev::WRITE);
-
-    _peer = peer;
-    _status = ConnectionStatus::Ready;
-
-    return true;
+    _w_read.feed_event(0);
 }
 
+// internal call only from async callbacks
 void Connection::close() noexcept
 {
-    if (_status == ConnectionStatus::Ready) {
-        _w_read.stop();
-        _w_write.stop();
-        _w_keep_alive_timeout.stop();
-        _w_request_read_timeout.stop();
+    _w_read.stop();
+    _w_write.stop();
+    _w_close.stop();
+    _w_user.stop();
+    _w_keep_alive_timeout.stop();
 
-        ::close(_w_read.fd);
+    ::close(_fd);
+    _closed = true;
+    _fd = -1;
+    _closed = true;
+    _processed = 0;
 
-        _in.reset();
-        _out.clear();
+    _out.clear();
+    _user.clear();
+    _buf.reset();
+    _pico.reset();
 
-        if (!_user_cb.empty() || _w_prepare.is_active())
-            _status = ConnectionStatus::Pending;
-        else
-            _status = ConnectionStatus::Closed;
-    }
+    if (_pool)
+        _pool->disconnect(this);
 }
 
+// call from user
 void Connection::disconnect() noexcept
 {
-    close();
+    if (!_closed && !_w_close.is_active()) {
+        _w_close.start();
+        _w_close.feed_event(0);
+    }
 }
 
-void Connection::send(const intrusive_ptr<Response>& resp) noexcept
+void Connection::cb_close(ev::prepare& w, int revents) noexcept
 {
-    if (resp && _status == ConnectionStatus::Ready) {
-        resp->set_ready();
-
-        //        if (!_out.empty() && _out.front() == resp && !_w_write.is_active() && write_int())
-        //            _w_write.start();
-
-        if (!_out.empty() && _out.front() == resp && !_w_write.is_active())
-            _w_write.start();
-    }
+    if (!_closed)
+        close();
 }
 
 void Connection::cb_read(ev::io& w, int revents) noexcept
 {
+    if (_closed)
+        return;
+
     while (true) {
-        switch (_in->recv(_config.message, w.fd)) {
-            case RecvStatus::Complete:
-                try {
-                    if (auto resp = _out.emplace_back(ResponseCache::get_raw()); resp) {
-                        resp->set_keep_alive(_in->keep_alive());
-                        resp->set_minor_version(_in->minor_version());
-                        _user_cb.emplace_back(_in, resp);
-
-                        if (!_w_prepare.is_active()) {
-                            _w_prepare.start();
-                            _w_prepare.feed_event(0);
-                        }
-                    }
-                }
-                catch (...) {
-                    // OOM guard
-                    perror("[OOM][Server:Connection] close: cannot allocate memory for new response object\n");
-                    close();
-                    return;
-                }
-
-                try {
-                    intrusive_ptr<Request> tmp(RequestCache::get_raw());
-                    if (!tmp->init(_config.message, _in->tail())) {
-                        close();
-                        return;
-                    }
-
-                    _in = std::move(tmp);
-                }
-                catch (...) {
-                    // OOM guard
-                    perror("[OOM][Server:Connection] close: cannot allocate memory for new request object\n");
-                    close();
-                    return;
-                }
-
-                // relaunch timeout timer
-                if (_w_keep_alive_timeout.is_active())
-                    _w_keep_alive_timeout.again();
-
-                _req_in_progress = false;
-                _req_count++;
-                continue;
-            case RecvStatus::Partial:
-                _req_in_progress = true;
-                continue;
-            case RecvStatus::Async:
-                return;
-            case RecvStatus::Err:
+        if (auto state = _buf->read(_fd); state != BufferState::Error) { // BufferState::Again or BufferState::Full
+            if (!parse_buffer(*_config, _buf, _processed, _user, _out, _pico)) {
                 close();
                 return;
+            }
+
+            if (_buf = renew_buffer(_buf, _config->buffer_renew_threshold, _processed); !_buf) {
+                close();
+                return;
+            }
+
+            // relaunch timeout timer
+            if (_w_keep_alive_timeout.is_active())
+                _w_keep_alive_timeout.again();
+
+            if (state == BufferState::Again)
+                break;
+
+            continue;
         }
+        else { // BufferState::Error
+            close();
+            return;
+        }
+    }
+
+    if (!_closed && !_user.empty() && !_w_user.is_active()) {
+        _w_user.start();
+        _w_user.feed_event(0);
     }
 }
 
-bool Connection::write_int() noexcept
+WriteState Connection::cb_writev_int(ev::io& w) noexcept
 {
-    while (true) {
-        if (_status == ConnectionStatus::Closed || _out.empty() || !_out.front()->is_ready())
-            return false;
+    while (!_out.empty() && _out.front()->_ready) {
+        std::array<iovec, 1024> iov{};
+        uint32_t iov_count = 0;
 
-        switch (_out.front()->send(_w_write.fd)) {
-            case SendStatus::Complete:
-                if (!_out.front()->keep_alive()) {
+        for (auto it = _out.begin(); iov_count < iov.size() && it != _out.end() && (*it)->_ready; ++it) {
+            if (auto count = (*it)->add_iov(iov.data() + iov_count, iov.size() - iov_count); count)
+                iov_count += count;
+            else
+                break;
+        }
+
+        if (!iov_count)
+            return WriteState::Stop;
+
+        if (ssize_t size = writev(_fd, iov.data(), (int)iov_count); size > 0) {
+            for (auto it = _out.begin(); size && it != _out.end();) {
+                if (!(*it)->process_iov(size))
+                    break;
+
+                if (!(*it)->_keep_alive) {
                     close();
-                    return false;
+                    return WriteState::Error;
                 }
 
+                ++it;
                 _out.pop_front();
-                continue;
-            case SendStatus::Async:
-                return true;
-            case SendStatus::Err:
-                close();
-                return false;
+            }
+        }
+        else if (size < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+            return WriteState::Again;
+        }
+        else if (size < 0 && errno == EINTR) {
+            continue;
+        }
+        else {
+            close();
+            return WriteState::Error;
         }
     }
+
+    return WriteState::Stop;
 }
 
 void Connection::cb_write(ev::io& w, int revents) noexcept
 {
-    if (!write_int() && w.is_active())
+    if (_closed)
+        return;
+
+    if (cb_writev_int(w) == WriteState::Stop)
+        w.stop();
+}
+
+void Connection::cb_user(ev::prepare& w, int revents) noexcept
+{
+    if (_closed || _user.empty())
+        return;
+
+    auto tmp = cache::Vector<tuple<intrusive_ptr<Request>, intrusive_ptr<Response>>>::get_unique(_user.capacity());
+    if (!tmp)
+        return;
+
+    tmp->swap(_user);
+    auto pool = _pool;
+
+    for (auto& [req, resp] : *tmp) {
+        try {
+            pool->_cb(intrusive_ptr(this), req, resp);
+        }
+        catch (std::exception& e) {
+            log_err("[Connection] Exception in user callback: {}", e.what());
+        }
+        catch (...) {
+            log_err("[Connection] Exception in user callback");
+        }
+
+        if (_closed || _w_close.is_active())
+            return;
+    }
+
+    if (!_w_write.is_active()) {
+        cb_writev_int(_w_write);
+
+        if (!_out.empty() && _out.front()->_ready) {
+            _w_write.start();
+            _w_write.feed_event(0);
+        }
+    }
+
+    if (_user.empty())
         w.stop();
 }
 
@@ -228,50 +259,81 @@ void Connection::cb_keep_alive_timeout(ev::timer& w, int revents) noexcept
     close();
 }
 
-void Connection::cb_request_read_timeout(ev::timer& w, int revents) noexcept
+void Connection::send(const intrusive_ptr<Response>& resp) noexcept
 {
-    if (_req_in_progress) {
-        if (_prev_req_count && *_prev_req_count == _req_count)
-            close();
-        else
-            _prev_req_count = _req_count;
+    if (resp && !_closed) {
+        if (_config->add_server_header)
+            resp->add_header_nocopy(_server_name_header);
+
+        if (_config->add_date_header)
+            resp->_date = _pool->date;
+
+        if (!resp->set_ready()) {
+            if (!_w_close.is_active()) {
+                _w_close.start();
+                _w_close.feed_event(0);
+            }
+            return;
+        }
+
+        if (!_w_write.is_active() && !_out.empty() && _out.front() == resp) {
+            _w_write.start();
+            _w_write.feed_event(0);
+        }
     }
 }
 
-net::Peer Connection::peer() const noexcept
+// call from pool close
+void Connection::detach() noexcept
 {
-    return _peer;
+    _pool.reset();
+
+    if (!_closed)
+        close();
 }
 
-void Connection::cb_prepare(ev::prepare& w, int revents)
+bool parse_buffer(const Config& config, const intrusive_ptr<Buffer>& buf, size_t& processed,
+                  vector<tuple<intrusive_ptr<Request>, intrusive_ptr<Response>>>& user,
+                  boost::circular_buffer<intrusive_ptr<Response>>& out, pico::RequestCache::unique& pico) noexcept
 {
-    auto tmp = cache::ArrayCache<vector<tuple<intrusive_ptr<Request>, intrusive_ptr<Response>>>>::get_unique(
-        _user_cb.capacity());
-    tmp->swap(_user_cb);
+    auto data = buf->tail(processed);
 
-    for (auto&& [req, resp] : *tmp) {
-        if (!_cb) {
-            send(resp);
-            continue;
-        }
+    while (!data.empty()) {
+        if (auto res = pico->parse(data, config.request_max_size, config.normalize, config.normalize_other);
+            res == pico::ParseResult::Complete) { // request ready
 
-        try {
-            _cb(intrusive_ptr(this), req, resp);
+            string_view body;
+            if (pico->content_length) {
+                body = data.substr(pico->header_size, pico->content_length);
+                data.remove_prefix(pico->header_size + pico->content_length);
+                processed += pico->header_size + pico->content_length;
+            }
+            else {
+                data.remove_prefix(pico->header_size);
+                processed += pico->header_size;
+            }
+
+            auto req = make_request(buf, std::move(pico), body);
+            auto resp = make_response(req->minor_version(), req->keep_alive());
+
+            if (!req || !resp)
+                return false;
+
+            if (out.full())
+                out.set_capacity(2 * out.capacity());
+
+            user.emplace_back(req, resp);
+            out.push_back(std::move(resp));
+
+            if (pico = pico::RequestCache::get_unique(); !pico)
+                return false;
         }
-        catch (std::exception& e) {
-            log_err("[Server:Connection] Exception in user callback: {}", e.what());
-        }
-        catch (...) {
-            log_err("[Server:Connection] Exception in user callback");
+        else {
+            return res != pico::ParseResult::Err;
         }
     }
 
-    if (_user_cb.empty()) {
-        w.stop();
-
-        if (_status == ConnectionStatus::Pending)
-            _status = ConnectionStatus::Closed;
-    }
+    return true;
 }
 
 } // namespace sniper::http::server

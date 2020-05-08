@@ -26,7 +26,6 @@ namespace sniper::pico {
 struct Request final
 {
     void clear() noexcept;
-    [[nodiscard]] ParseResult parse(char* data, size_t size) noexcept;
     [[nodiscard]] ParseResult parse(string_view buf, size_t max_size, bool normalize, bool normalize_vals) noexcept;
     [[nodiscard]] ParseResult parse_head(string_view buf, bool normalize, bool normalize_vals) noexcept;
 

@@ -1,8 +1,5 @@
-// This is an open source non-commercial project. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
-
 /*
- * Copyright (c) 2018 - 2019, MetaHash, Oleg Romanenko (oleg@romanenko.ro)
+ * Copyright (c) 2020, RTBtech, MediaSniper, Oleg Romanenko (oleg@romanenko.ro)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,80 +14,74 @@
  * limitations under the License.
  */
 
-#include <sniper/http/server/Connection.h>
+#include <linux/tcp.h>
 #include <sniper/log/log.h>
 #include <sniper/net/socket.h>
 #include <sniper/std/check.h>
 #include "Server.h"
+#include "Buffer.h"
+#include "server/ServerInt.h"
 
 namespace sniper::http {
 
-Server::Server(event::loop_ptr loop, server::Config config) : _loop(std::move(loop)), _config(config)
+namespace {
+
+local_ptr<string> gen_date() noexcept
+{
+    try {
+        return make_local<string>(fmt::format("Date: {:%a, %d %b %Y %H:%M:%S} GMT\r\n", fmt::gmtime(time(nullptr))));
+    }
+    catch (...) {
+        return nullptr;
+    }
+}
+
+} // namespace
+
+Server::Server(event::loop_ptr loop, intrusive_ptr<server::Config> config) :
+    _loop(std::move(loop)), _config(std::move(config))
 {
     check(_loop, "[Server] loop is nullptr");
 
-    _w_clean.set(*_loop);
-    _w_clean.set<Server, &Server::cb_clean>(this);
+    if (!_config)
+        _config = server::make_config();
+    check(_config, "[Server] config is nullptr");
 
-    auto sec = duration_cast<seconds>(_config.conns_clean_interval);
-    _w_clean.start(sec.count(), sec.count());
+    _pool = make_intrusive<server::Pool>(_config);
+    check(_pool, "[Server] pool is nullptr");
+
+    _w_date.set(*_loop);
+    _w_date.set<Server, &Server::cb_date>(this);
+    _w_date.start(1.0, 1.0);
+    _pool->date = gen_date();
 }
 
 Server::~Server() noexcept
 {
+    _w_date.stop();
+
     for (auto& w : _w_accept)
         if (w->is_active()) {
             w->stop();
             ::close(w->fd);
         }
 
-    for (auto& conn : _conns)
-        conn->disconnect();
+    _pool->close();
 }
 
-bool Server::bind(uint16_t port, bool ssl) noexcept
+bool Server::bind(uint16_t port) noexcept
 {
-    return bind("", port, ssl);
+    return bind("", port);
 }
 
-bool Server::bind(const string& ip, uint16_t port, bool ssl) noexcept
+bool Server::bind(const string& ip, uint16_t port) noexcept
 {
-    if (!port)
-        return false;
-
-    int fd = net::socket::tcp::create();
+    int fd = server::internal::create_socket(ip, port, _config->send_buf, _config->recv_buf, _config->backlog);
     if (fd < 0)
         return false;
 
-    if (!net::socket::set_reuse_addr_and_port(fd) || !net::socket::set_non_blocking(fd)) {
-        ::close(fd);
-        return false;
-    }
-
-    if (_config.recv_buf && !net::socket::tcp::set_recv_buf(fd, _config.recv_buf)) {
-        ::close(fd);
-        return false;
-    }
-
-    if (_config.send_buf && !net::socket::tcp::set_send_buf(fd, _config.send_buf)) {
-        ::close(fd);
-        return false;
-    }
-
-    if (!net::socket::bind(fd, ip, port)) {
-        ::close(fd);
-        return false;
-    }
-
-    if (!net::socket::tcp::listen(fd, _config.backlog)) {
-        ::close(fd);
-        return false;
-    }
-
-
     try {
-        auto w = make_unique<ServerIO>();
-        w->ssl = ssl;
+        auto w = make_unique<ev::io>();
         w->set(*_loop);
         w->set<Server, &Server::cb_accept>(this);
         w->start(fd, ev::READ);
@@ -106,53 +97,19 @@ bool Server::bind(const string& ip, uint16_t port, bool ssl) noexcept
     return true;
 }
 
-intrusive_ptr<server::Connection> Server::get_conn()
-{
-    // looking for closed conn
-    {
-        size_t n = 0;
-        for (auto it = _conns.begin(); it != _conns.end() && n < 50; ++it, ++n) {
-            if ((*it)->status() == server::ConnectionStatus::Closed && (*it)->use_count() == 1) {
-                _conns.splice(_conns.end(), _conns, it);
-                return *it;
-            }
-        }
-    }
-
-    if (!_free_conns.empty()) {
-        _conns.splice(_conns.end(), _free_conns, _free_conns.begin());
-        return _conns.back();
-    }
-
-    if (_free_conns.size() + _conns.size() < _config.max_conns) {
-        try {
-            auto conn = make_intrusive<server::Connection>(_loop, _config.connection, _cb_request);
-            return _conns.emplace_back(std::move(conn));
-        }
-        catch (...) {
-            perror("[OOM][Server] Cannot allocate memory for conn");
-            return nullptr;
-        }
-    }
-
-    return nullptr;
-}
-
 void Server::cb_accept(ev::io& w, int revents) noexcept
 {
-    auto* server_w = static_cast<ServerIO*>(&w);
-
     while (true) {
         if (auto [fd, peer] = net::socket::tcp::accept4(w.fd); fd >= 0) {
-            if (auto conn = get_conn(); conn) {
-                if (conn->accept(fd, peer, server_w->ssl))
-                    continue;
+            net::socket::tcp::set_defer_accept(fd);
+            net::socket::tcp::set_fastopen(fd);
 
-                conn->disconnect();
+            if (auto conn = _pool->get(_loop, _pool); conn) {
+                conn->set(peer, fd);
+                continue;
             }
-            else {
-                ::close(fd);
-            }
+
+            ::close(fd);
         }
         else if (fd < 0 && errno == EINTR) {
             continue;
@@ -167,23 +124,9 @@ void Server::cb_accept(ev::io& w, int revents) noexcept
     }
 }
 
-void Server::cb_clean(ev::timer& w, int revents) noexcept
+void Server::cb_date(ev::timer& w, int revents) noexcept
 {
-    for (auto it = _conns.begin(); it != _conns.end();) {
-        if ((*it)->status() == server::ConnectionStatus::Closed && (*it)->use_count() == 1) {
-            if (_free_conns.size() + _conns.size() > _config.max_conns) {
-                it = _conns.erase(it);
-            }
-            else {
-                auto it2 = it;
-                ++it;
-                _free_conns.splice(_free_conns.end(), _conns, it2);
-            }
-        }
-        else {
-            ++it;
-        }
-    }
+    _pool->date = gen_date();
 }
 
 } // namespace sniper::http

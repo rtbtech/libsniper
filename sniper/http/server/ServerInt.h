@@ -18,8 +18,8 @@
 
 #include <sniper/std/string.h>
 
-namespace sniper::http::server2::internal {
+namespace sniper::http::server::internal {
 
 int create_socket(const string& ip, uint16_t port, uint32_t send_buf, uint32_t recv_buf, int backlog) noexcept;
 
-} // namespace sniper::http::server2::internal
+} // namespace sniper::http::server::internal

@@ -1,8 +1,5 @@
-// This is an open source non-commercial project. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
-
 /*
- * Copyright (c) 2018 - 2019, MetaHash, Oleg Romanenko (oleg@romanenko.ro)
+ * Copyright (c) 2020, RTBtech, MediaSniper, Oleg Romanenko (oleg@romanenko.ro)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,186 +14,109 @@
  * limitations under the License.
  */
 
-#include <cstring>
-#include <sniper/log/log.h>
-#include "sniper/http/server/Config.h"
+#include <sniper/http/Buffer.h>
 #include "Request.h"
 
 namespace sniper::http::server {
 
 void Request::clear() noexcept
 {
-    _pico_req.clear();
-    _read = 0;
-    _processed = 0;
-    _total = 0;
-    _buf_body.reset();
-}
-
-bool Request::init(const MessageConfig& config, string_view tail)
-{
-    if (_buf_header.size() < config.header_max_size)
-        _buf_header.resize(config.header_max_size);
-
-    if (_buf_header.size() < tail.size()) {
-        log_err("[Server:Request] request tail size {} > max header size {}", tail.size(), config.header_max_size);
-        return false;
-    }
-
-    // copy tail to buf
-    if (!tail.empty()) {
-        memcpy(_buf_header.data(), tail.data(), tail.size());
-        _read = tail.size();
-    }
-
-    return true;
-}
-
-RecvStatus Request::parse(const MessageConfig& config) noexcept
-{
-    _processed = _read;
-
-    if (!_total) {
-        switch (_pico_req.parse(_buf_header.data(), _read)) {
-            case pico::ParseResult::Err:
-                log_err("[Server:Request] request parse error");
-                return RecvStatus::Err;
-            case pico::ParseResult::Partial:
-                return RecvStatus::Partial;
-            case pico::ParseResult::Complete:
-                _total = _pico_req.header_size + _pico_req.content_length;
-
-                if (_pico_req.content_length && _total > _buf_header.size()) {
-                    if (_pico_req.content_length <= config.body_max_size) {
-                        _buf_body = cache::StringCache::get_unique(_pico_req.content_length);
-                        _buf_body->resize(_pico_req.content_length);
-
-                        // copy tail from buf_header to buf_body
-                        if (_read > _pico_req.header_size)
-                            memcpy(_buf_body->data(), _buf_header.data() + _pico_req.header_size,
-                                   _read - _pico_req.header_size);
-                    }
-                    else {
-                        log_err("[Server:Request] request body size {} > max body size {}", _pico_req.content_length,
-                                config.body_max_size);
-                        return RecvStatus::Err;
-                    }
-                }
-
-                break;
-        }
-    }
-
-    if (_read < _total)
-        return RecvStatus::Partial;
-
-    return RecvStatus::Complete;
-}
-
-RecvStatus Request::recv(const MessageConfig& config, int fd) noexcept
-{
-    if (_read > _processed)
-        return parse(config);
-
-
-    if (ssize_t count = recv_int(config, fd); count > 0) {
-        _read += count;
-        return parse(config);
-    }
-    else if (count < 0 && errno == EINTR) {
-        return RecvStatus::Partial;
-    }
-    else if (count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-        return RecvStatus::Async;
-    }
-    else if (count < 0 && errno == ENOMEM) {
-        return RecvStatus::Err;
-    }
-    else {
-        return RecvStatus::Err;
-    }
-}
-
-ssize_t Request::recv_int(const MessageConfig& config, int fd) noexcept
-{
-    if (!_total && _read < _buf_header.size())
-        return read(fd, _buf_header.data() + _read, std::min(config.header_chunk_size, _buf_header.size() - _read));
-
-    if (_total && _read < _total) {
-        if (_total <= _buf_header.size())
-            return read(fd, _buf_header.data() + _read, _total - _read);
-        else
-            return read(fd, _buf_body->data() + _read - _pico_req.header_size, _total - _read);
-    }
-
-    log_err("[Client:Response] request > allocated memory");
-    log_err("[Client:Response] read={}, header_size={}, body_size={}", _read, _pico_req.header_size,
-            _pico_req.content_length);
-    errno = ENOMEM;
-    return -1;
-}
-
-string_view Request::tail() const noexcept
-{
-    if (_read > _total)
-        return string_view(_buf_header).substr(_total, _read - _total);
-
-    return {};
+    _body = {};
+    _buf.reset();
+    _pico.reset();
 }
 
 string_view Request::data() const noexcept
 {
-    if (_buf_body)
-        return *_buf_body;
-    else if (_pico_req.content_length)
-        return string_view(_buf_header).substr(_pico_req.header_size, _pico_req.content_length);
+    if (_buf)
+        return _body;
 
     return {};
 }
 
 size_t Request::content_length() const noexcept
 {
-    return _pico_req.content_length;
+    if (_pico)
+        return _pico->content_length;
+
+    return {};
 }
 
 bool Request::keep_alive() const noexcept
 {
-    return _pico_req.keep_alive;
+    if (_pico)
+        return _pico->keep_alive;
+
+    return {};
 }
 
 int Request::minor_version() const noexcept
 {
-    return _pico_req.minor_version;
+    if (_pico)
+        return _pico->minor_version;
+
+    return {};
 }
 
 string_view Request::method() const noexcept
 {
-    return _pico_req.method;
+    if (_pico)
+        return _pico->method;
+
+    return {};
 }
 
 string_view Request::path() const noexcept
 {
-    return _pico_req.path;
+    if (_pico)
+        return _pico->path;
+
+    return {};
 }
 
 string_view Request::qs() const noexcept
 {
-    return _pico_req.qs;
+    if (_pico)
+        return _pico->qs;
+
+    return {};
 }
 
 string_view Request::fragment() const noexcept
 {
-    return _pico_req.fragment;
+    if (_pico)
+        return _pico->fragment;
+
+    return {};
 }
 
 const static_vector<pair_sv, pico::MAX_HEADERS>& Request::headers() const noexcept
 {
-    return _pico_req.headers;
+    if (_pico)
+        return _pico->headers;
+
+    return _empty_headers;
 }
 
 const small_vector<pair_sv, pico::MAX_PARAMS>& Request::params() const noexcept
 {
-    return _pico_req.params;
+    if (_pico)
+        return _pico->params;
+
+    return _empty_params;
+}
+
+intrusive_ptr<Request> make_request(intrusive_ptr<Buffer> buf, pico::RequestCache::unique&& pico,
+                                    string_view body) noexcept
+{
+    if (auto req = RequestCache::get_intrusive(); req) {
+        req->_buf = std::move(buf);
+        req->_pico = std::move(pico);
+        req->_body = body;
+        return req;
+    }
+
+    return nullptr;
 }
 
 } // namespace sniper::http::server

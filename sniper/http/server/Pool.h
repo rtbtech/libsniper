@@ -22,7 +22,7 @@
 #include <sniper/std/memory.h>
 #include <sniper/std/vector.h>
 
-namespace sniper::http::server2 {
+namespace sniper::http::server {
 
 struct Config;
 struct Connection;
@@ -46,4 +46,4 @@ struct Pool final : public intrusive_unsafe_ref_counter<Pool>
     local_ptr<string> date;
 };
 
-} // namespace sniper::http::server2
+} // namespace sniper::http::server
