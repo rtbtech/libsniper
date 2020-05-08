@@ -31,8 +31,7 @@ struct Config final : public intrusive_unsafe_ref_counter<Config>
     int backlog = 10000;
     size_t max_conns = 10000;
 
-    //    milliseconds keep_alive_timeout = 1min;
-    //    milliseconds request_read_timeout = 1s;
+    milliseconds keep_alive_timeout = 1min;
 
     uint32_t buffer_size = 1024 * 1024;
     uint32_t buffer_renew_threshold = 10; // percent

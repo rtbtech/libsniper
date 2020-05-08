@@ -59,6 +59,7 @@ struct Connection final : public intrusive_cache_unsafe_ref_counter<Connection, 
     void disconnect() noexcept;
 
 private:
+    void cb_keep_alive_timeout(ev::timer& w, [[maybe_unused]] int revents) noexcept;
     void cb_read(ev::io& w, [[maybe_unused]] int revents) noexcept;
     void cb_write(ev::io& w, [[maybe_unused]] int revents) noexcept;
     void cb_close(ev::prepare& w, [[maybe_unused]] int revents) noexcept;
@@ -78,6 +79,7 @@ private:
     ev::io _w_write;
     ev::prepare _w_close;
     ev::prepare _w_user;
+    ev::timer _w_keep_alive_timeout;
 
     intrusive_ptr<Buffer> _buf;
     boost::circular_buffer<intrusive_ptr<Response>> _out;

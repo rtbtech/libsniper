@@ -31,6 +31,12 @@ Connection::Connection()
 {
     _out.set_capacity(128);
     _user.reserve(128);
+
+    _w_read.set<Connection, &Connection::cb_read>(this);
+    _w_write.set<Connection, &Connection::cb_write>(this);
+    _w_close.set<Connection, &Connection::cb_close>(this);
+    _w_user.set<Connection, &Connection::cb_user>(this);
+    _w_keep_alive_timeout.set<Connection, &Connection::cb_keep_alive_timeout>(this);
 }
 
 void Connection::clear() noexcept
@@ -62,11 +68,12 @@ void Connection::set(event::loop_ptr loop, intrusive_ptr<Pool> pool, intrusive_p
     _w_write.set(*_loop);
     _w_close.set(*_loop);
     _w_user.set(*_loop);
+    _w_keep_alive_timeout.set(*_loop);
 
-    _w_read.set<Connection, &Connection::cb_read>(this);
-    _w_write.set<Connection, &Connection::cb_write>(this);
-    _w_close.set<Connection, &Connection::cb_close>(this);
-    _w_user.set<Connection, &Connection::cb_user>(this);
+    if (_config->keep_alive_timeout > 0ms) {
+        double to_d = (double)duration_cast<milliseconds>(_config->keep_alive_timeout).count() / 1000.0;
+        _w_keep_alive_timeout.start(to_d, to_d);
+    }
 
     _w_read.start(fd, ev::READ);
     _w_write.set(fd, ev::WRITE);
@@ -88,6 +95,7 @@ void Connection::close() noexcept
     _w_write.stop();
     _w_close.stop();
     _w_user.stop();
+    _w_keep_alive_timeout.stop();
     ::close(_fd);
     _closed = true;
 
@@ -132,6 +140,10 @@ void Connection::cb_read(ev::io& w, int revents) noexcept
                 close();
                 return;
             }
+
+            // relaunch timeout timer
+            if (_w_keep_alive_timeout.is_active())
+                _w_keep_alive_timeout.again();
 
             if (state == BufferState::Again)
                 break;
@@ -243,6 +255,11 @@ void Connection::cb_user(ev::prepare& w, int revents) noexcept
 
     if (_user.empty())
         w.stop();
+}
+
+void Connection::cb_keep_alive_timeout(ev::timer& w, int revents) noexcept
+{
+    close();
 }
 
 void Connection::send(const intrusive_ptr<Response>& resp) noexcept
