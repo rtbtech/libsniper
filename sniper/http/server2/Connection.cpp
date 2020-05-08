@@ -53,7 +53,13 @@ void Connection::clear() noexcept
     _pico.reset();
 }
 
-void Connection::set(event::loop_ptr loop, intrusive_ptr<Pool> pool, intrusive_ptr<Config> config, int fd) noexcept
+net::Peer Connection::peer() const noexcept
+{
+    return _peer;
+}
+
+void Connection::set(event::loop_ptr loop, intrusive_ptr<Pool> pool, intrusive_ptr<Config> config, net::Peer peer,
+                     int fd) noexcept
 {
     _loop = std::move(loop);
     _pool = std::move(pool);
@@ -61,6 +67,7 @@ void Connection::set(event::loop_ptr loop, intrusive_ptr<Pool> pool, intrusive_p
     check(_pool, "Pool is nullptr");
     check(_config, "Config is nullptr");
 
+    _peer = peer;
     _fd = fd;
     _closed = false;
 

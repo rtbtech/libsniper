@@ -20,6 +20,7 @@
 #include <sniper/cache/Cache.h>
 #include <sniper/event/Loop.h>
 #include <sniper/http/server2/Config.h>
+#include <sniper/net/Peer.h>
 #include <sniper/pico/Request.h>
 #include <sniper/std/memory.h>
 #include <sniper/std/string.h>
@@ -52,11 +53,14 @@ struct Connection final : public intrusive_cache_unsafe_ref_counter<Connection, 
     Connection();
 
     void clear() noexcept;
-    void set(event::loop_ptr loop, intrusive_ptr<Pool> pool, intrusive_ptr<Config> config, int fd) noexcept;
+    void set(event::loop_ptr loop, intrusive_ptr<Pool> pool, intrusive_ptr<Config> config, net::Peer peer,
+             int fd) noexcept;
     void send(const intrusive_ptr<Response>& resp) noexcept;
 
     void detach() noexcept;
     void disconnect() noexcept;
+
+    [[nodiscard]] net::Peer peer() const noexcept;
 
 private:
     void cb_keep_alive_timeout(ev::timer& w, [[maybe_unused]] int revents) noexcept;
@@ -71,6 +75,7 @@ private:
     event::loop_ptr _loop;
     intrusive_ptr<Pool> _pool;
     intrusive_ptr<Config> _config;
+    net::Peer _peer;
     int _fd = -1;
     bool _closed = true;
     size_t _processed = 0;

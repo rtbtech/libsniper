@@ -106,8 +106,7 @@ void Server2::cb_accept(ev::io& w, int revents) noexcept
             net::socket::tcp::set_fastopen(fd);
 
             if (auto conn = _pool->get(); conn) {
-                // TODO: add params peer
-                conn->set(_loop, _pool, _config, fd);
+                conn->set(_loop, _pool, _config, peer, fd);
                 continue;
             }
 
