@@ -2,8 +2,9 @@ libsniper is a small, very fast C++ framework for writing highload HTTP services
 ------------------------------------------------
 
 Currently libsniper is successfully used by several companies:
-- as framework for DSP (Demand Side Platform) at AdSniper / MediaSniper. Serves more than 300K qps.
-- as framework for MetaHash Peer Node. Serves more than 150K tps.
+- as framework for DSP (Demand Side Platform) at [MediaSniper](https://mediasniper.ru/index.php?lang=en) and [AdSniper](https://adsniper.ru/). Serves more than 300K qps.
+- as framework for [MetaHash](https://metahash.org/) Peer Node ([sources](https://github.com/metahashorg/Node-Peer)). Serves more than 150K tps.
+- as framework for DSP at [AdNow.com](https://adnow.com/)
 
 #### Features
 
