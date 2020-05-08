@@ -55,8 +55,10 @@ private:
     friend struct Connection;
     friend intrusive_ptr<Response> make_response(int minor_version, bool keep_alive) noexcept;
 
-    bool set_ready() noexcept;
     void fill_iov() noexcept;
+    [[nodiscard]] uint32_t add_iov(iovec* data, size_t max_size) noexcept;
+    [[nodiscard]] bool process_iov(ssize_t& size) noexcept;
+    [[nodiscard]] bool set_ready() noexcept;
 
     bool _ready = false;
     bool _keep_alive = false;
@@ -66,8 +68,9 @@ private:
     small_vector<Chunk, 32> _headers;
     Chunk _data{""sv, cache::StringCache::get_unique_empty()};
 
-    small_vector<iovec, 32> _iov;
+    small_vector<iovec, 35> _iov;
     uint32_t _processed = 0;
+    uint32_t _total_size = 0;
 };
 
 [[nodiscard]] inline intrusive_ptr<Response> make_response(int minor_version, bool keep_alive) noexcept

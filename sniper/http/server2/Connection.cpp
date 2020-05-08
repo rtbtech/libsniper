@@ -27,13 +27,6 @@
 
 namespace sniper::http::server2 {
 
-namespace {
-
-const string_view response =
-    "HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: keep-alive\r\nAccess-Control-Allow-Origin: *\r\n\r\n";
-
-} // namespace
-
 Connection::Connection()
 {
     _out.set_capacity(128);
@@ -46,8 +39,6 @@ void Connection::clear() noexcept
     _pool.reset();
     _fd = -1;
     _closed = true;
-
-    _sent = 0;
     _processed = 0;
 
     _buf.reset();
@@ -159,31 +150,40 @@ void Connection::cb_read(ev::io& w, int revents) noexcept
     }
 }
 
-WriteState Connection::cb_writev_int_resp(ev::io& w) noexcept
+WriteState Connection::cb_writev_int(ev::io& w) noexcept
 {
     while (!_out.empty() && _out.front()->_ready) {
         std::array<iovec, 1024> iov{};
-        unsigned iov_count = 0;
+        uint32_t iov_count = 0;
 
-        for (auto it = _out.begin(); iov_count < 32 && it != _out.end() && (*it)->_ready; ++it) {
-            iov[iov_count].iov_base = (char*)response.data() + _sent;
-            iov[iov_count].iov_len = response.size() - _sent;
-            iov_count++;
+        for (auto it = _out.begin(); iov_count < iov.size() && it != _out.end() && (*it)->_ready; ++it) {
+            if (auto count = (*it)->add_iov(iov.data() + iov_count, iov.size() - iov_count); count)
+                iov_count += count;
+            else
+                break;
         }
 
         if (!iov_count)
             return WriteState::Stop;
 
-        if (ssize_t count = writev(_fd, iov.data(), (int)iov_count); count > 0) {
-            _sent = count % response.size();
+        if (ssize_t size = writev(_fd, iov.data(), (int)iov_count); size > 0) {
+            for (auto it = _out.begin(); size && it != _out.end();) {
+                if (!(*it)->process_iov(size))
+                    break;
 
-            for (unsigned i = 0; i < count / response.size(); i++)
+                if (!(*it)->_keep_alive) {
+                    close();
+                    return WriteState::Error;
+                }
+
+                ++it;
                 _out.pop_front();
+            }
         }
-        else if (count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+        else if (size < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
             return WriteState::Again;
         }
-        else if (count < 0 && errno == EINTR) {
+        else if (size < 0 && errno == EINTR) {
             continue;
         }
         else {
@@ -201,7 +201,7 @@ void Connection::cb_write(ev::io& w, int revents) noexcept
     if (_closed)
         return;
 
-    if (cb_writev_int_resp(w) == WriteState::Stop)
+    if (cb_writev_int(w) == WriteState::Stop)
         w.stop();
 }
 
@@ -232,8 +232,14 @@ void Connection::cb_user(ev::prepare& w, int revents) noexcept
             return;
     }
 
-    if (!_w_write.is_active())
-        cb_writev_int_resp(_w_write);
+    if (!_w_write.is_active()) {
+        cb_writev_int(_w_write);
+
+        if (!_out.empty() && _out.front()->_ready) {
+            _w_write.start();
+            _w_write.feed_event(0);
+        }
+    }
 
     if (_user.empty())
         w.stop();

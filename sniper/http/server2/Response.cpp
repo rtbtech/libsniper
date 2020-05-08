@@ -25,12 +25,14 @@ namespace {
 constexpr string_view connection_close = "Connection: close\r\n";
 constexpr string_view connection_keep_alive = "Connection: keep-alive\r\n";
 constexpr string_view content_length = "Content-Length: ";
-constexpr string_view content_length_0 = "Content-Length: 0\r\n";
+constexpr string_view content_length_0 = "Content-Length: 0\r\n\r\n";
 
-inline void fill(string_view str, iovec& i) noexcept
+inline uint32_t fill(string_view str, iovec& i) noexcept
 {
     i.iov_len = str.size();
     i.iov_base = const_cast<char*>(str.data());
+
+    return i.iov_len;
 }
 
 } // namespace
@@ -48,6 +50,7 @@ void Response::clear() noexcept
     _data = {""sv, cache::StringCache::get_unique_empty()};
     _iov.clear();
     _processed = 0;
+    _total_size = 0;
 }
 
 void Response::add_header_copy(string_view header)
@@ -146,14 +149,48 @@ bool Response::set_ready() noexcept
 
 void Response::fill_iov() noexcept
 {
-    fill(_first_header, _iov.emplace_back());
+    _total_size += fill(_first_header, _iov.emplace_back());
 
     for (auto& h : _headers)
         if (!std::get<string_view>(h).empty())
-            fill(std::get<string_view>(h), _iov.emplace_back());
+            _total_size += fill(std::get<string_view>(h), _iov.emplace_back());
 
     if (!std::get<string_view>(_data).empty())
-        fill(std::get<string_view>(_data), _iov.emplace_back());
+        _total_size += fill(std::get<string_view>(_data), _iov.emplace_back());
+}
+
+uint32_t Response::add_iov(iovec* data, size_t max_size) noexcept
+{
+    if (auto count = (_iov.size() - _processed); count && count <= max_size) {
+        memcpy(data, _iov.data() + _processed, count * sizeof(iovec));
+        return count;
+    }
+
+    return 0;
+}
+
+bool Response::process_iov(ssize_t& size) noexcept
+{
+    if (_total_size <= size) {
+        size -= _total_size;
+        return true;
+    }
+
+    for (unsigned i = _processed; size && i < _iov.size(); i++) {
+        if ((size_t)size >= _iov[i].iov_len) {
+            size -= _iov[i].iov_len;
+            _total_size -= _iov[i].iov_len;
+            _processed++;
+        }
+        else {
+            _iov[i].iov_len -= size;
+            _total_size -= size;
+            size = 0;
+            break;
+        }
+    }
+
+    return _processed == _iov.size();
 }
 
 } // namespace sniper::http::server2

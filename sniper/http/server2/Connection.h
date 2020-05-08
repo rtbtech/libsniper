@@ -63,7 +63,7 @@ private:
     void cb_write(ev::io& w, [[maybe_unused]] int revents) noexcept;
     void cb_close(ev::prepare& w, [[maybe_unused]] int revents) noexcept;
     void cb_user(ev::prepare& w, [[maybe_unused]] int revents) noexcept;
-    WriteState cb_writev_int_resp(ev::io& w) noexcept;
+    WriteState cb_writev_int(ev::io& w) noexcept;
 
     void close() noexcept;
 
@@ -72,14 +72,12 @@ private:
     intrusive_ptr<Config> _config;
     int _fd = -1;
     bool _closed = true;
+    size_t _processed = 0;
 
     ev::io _w_read;
     ev::io _w_write;
     ev::prepare _w_close;
     ev::prepare _w_user;
-
-    uint32_t _sent = 0;
-    size_t _processed = 0;
 
     intrusive_ptr<Buffer> _buf;
     boost::circular_buffer<intrusive_ptr<Response>> _out;
