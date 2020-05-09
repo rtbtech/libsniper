@@ -181,7 +181,7 @@ WriteState Connection::cb_writev_int(ev::io& w) noexcept
                 if (!(*it)->process_iov(size))
                     break;
 
-                if (!(*it)->_keep_alive) {
+                if (!(*it)->keep_alive) {
                     close();
                     return WriteState::Error;
                 }

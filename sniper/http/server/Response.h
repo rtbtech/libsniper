@@ -37,6 +37,7 @@ struct Response final : public intrusive_cache_unsafe_ref_counter<Response, Resp
 {
     void clear() noexcept;
 
+    bool keep_alive = false;
     ResponseStatus code = ResponseStatus::NOT_IMPLEMENTED;
 
     // "Content-Type: text/html; charset=utf-8\r\n";
@@ -58,7 +59,6 @@ private:
     [[nodiscard]] bool set_ready() noexcept;
 
     bool _ready = false;
-    bool _keep_alive = false;
     int _minor_version = 0;
 
     string_view _first_header;
@@ -75,7 +75,7 @@ private:
 {
     if (auto resp = ResponseCache::get_intrusive(); resp) {
         resp->_minor_version = minor_version;
-        resp->_keep_alive = keep_alive;
+        resp->keep_alive = keep_alive;
         return resp;
     }
 

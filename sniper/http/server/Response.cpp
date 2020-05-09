@@ -42,7 +42,7 @@ void Response::clear() noexcept
     code = ResponseStatus::NOT_IMPLEMENTED;
 
     _ready = false;
-    _keep_alive = false;
+    keep_alive = false;
     _minor_version = 0;
 
     _first_header = {};
@@ -115,12 +115,12 @@ bool Response::set_ready() noexcept
 
     // connection header
     if (_minor_version == 0) {
-        if (_keep_alive)
+        if (keep_alive)
             _headers.emplace_back(connection_keep_alive, cache::StringCache::get_unique_empty());
         else
             _headers.emplace_back(connection_close, cache::StringCache::get_unique_empty());
     }
-    else if (!_keep_alive) {
+    else if (!keep_alive) {
         _headers.emplace_back(connection_close, cache::StringCache::get_unique_empty());
     }
 
