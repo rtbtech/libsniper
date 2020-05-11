@@ -18,6 +18,10 @@ Currently libsniper is successfully used by several companies:
 
 #### [Examples](https://github.com/rtbtech/libsniper_examples)
 
+#### Dependencies
+
+##### xxhash: libxxhash-dev >= 0.6.2
+
 
 #### Performance
 **CPU**: 2x Intel Xeon CPU E5-2630 v4 @ 2.20GHz

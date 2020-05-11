@@ -1,0 +1,22 @@
+FIND_PATH(LIBXXHASH_INCLUDE_DIR xxhash.h /usr/local/include /opt/local/include /usr/include)
+FIND_LIBRARY(LIBXXHASH_LIBRARY NAMES libxxhash.a PATH /usr/local/lib /opt/local/lib /usr/lib)
+
+IF (LIBXXHASH_INCLUDE_DIR AND LIBXXHASH_LIBRARY)
+    SET(Libxxhash_FOUND TRUE)
+ENDIF ()
+
+IF (Libxxhash)
+    IF (NOT Libxxhash_FIND_QUIETLY)
+        MESSAGE(STATUS "Found xxhash: ${LIBXXHASH_LIBRARY}")
+    ENDIF ()
+ELSE()
+    IF (Libxxhash_FIND_REQUIRED)
+        IF(NOT LIBXXHASH_INCLUDE_DIR)
+            MESSAGE(FATAL_ERROR "Could not find xxhash header file!")
+        ENDIF()
+
+        IF(NOT LIBXXHASH_LIBRARY)
+            MESSAGE(FATAL_ERROR "Could not find xxhash library file!")
+        ENDIF()
+    ENDIF ()
+ENDIF ()

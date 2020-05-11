@@ -3,21 +3,21 @@ set(LIB net)
 include_directories(.)
 
 set(LIB_SOURCES
-    ip.h
-    socket.h
-    Url.h
-    http_parser.h
-    Peer.h
-    Domain.h
-    hostname.h
-    ip.cpp
-    socket.cpp
-    Url.cpp
-    http_parser.c
-    Peer.cpp
-    Domain.cpp
-    hostname.cpp
-    )
+        ip.h
+        socket.h
+        Url.h
+        http_parser.h
+        Peer.h
+        Domain.h
+        hostname.h
+        ip.cpp
+        socket.cpp
+        Url.cpp
+        http_parser.c
+        Peer.cpp
+        Domain.cpp
+        hostname.cpp
+        )
 
 find_package(fmt REQUIRED)
 find_package(Libre2 REQUIRED)
