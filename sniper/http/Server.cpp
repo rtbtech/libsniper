@@ -19,7 +19,6 @@
 #include <sniper/net/socket.h>
 #include <sniper/std/check.h>
 #include "Server.h"
-#include "Buffer.h"
 #include "server/ServerInt.h"
 
 namespace sniper::http {

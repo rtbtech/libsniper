@@ -19,6 +19,7 @@
 #include <ev++.h>
 #include <sniper/cache/Cache.h>
 #include <sniper/std/chrono.h>
+#include <sniper/std/memory.h>
 #include <sniper/std/tuple.h>
 
 namespace sniper::http::wait {

@@ -16,8 +16,8 @@
 
 #pragma once
 
-#include <sniper/cache/Cache.h>
 #include <sniper/event/Loop.h>
+#include <sniper/http/Buffer.h>
 #include <sniper/http/server/Config.h>
 #include <sniper/http/server/Connection.h>
 #include <sniper/http/server/Pool.h>

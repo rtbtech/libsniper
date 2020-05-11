@@ -20,6 +20,7 @@
 #include <sniper/std/string.h>
 #include <sys/uio.h>
 #include "Connection.h"
+#include "Config.h"
 #include "Pool.h"
 #include "Request.h"
 #include "Response.h"

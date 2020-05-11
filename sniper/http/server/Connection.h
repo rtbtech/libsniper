@@ -17,12 +17,9 @@
 #pragma once
 
 #include <boost/circular_buffer.hpp>
-#include <sniper/cache/Cache.h>
 #include <sniper/event/Loop.h>
-#include <sniper/http/server/Config.h>
 #include <sniper/net/Peer.h>
 #include <sniper/pico/Request.h>
-#include <sniper/std/memory.h>
 #include <sniper/std/string.h>
 #include <sniper/std/tuple.h>
 #include <sniper/std/vector.h>
@@ -42,6 +39,7 @@ enum class WriteState
     Error
 };
 
+struct Config;
 struct Pool;
 struct Request;
 struct Response;
