@@ -1,0 +1,22 @@
+FIND_PATH(LIBHTTP_PARSER_INCLUDE_DIR http_parser.h /usr/local/include /opt/local/include /usr/include)
+FIND_LIBRARY(LIBHTTP_PARSER_LIBRARY NAMES libhttp_parser.a PATH /usr/local/lib /opt/local/lib /usr/lib)
+
+IF (LIBHTTP_PARSER_INCLUDE_DIR AND LIBHTTP_PARSER_LIBRARY)
+    SET(Libhttp_parser_FOUND TRUE)
+ENDIF ()
+
+IF (Libhttp_parser_FOUND)
+    IF (NOT Libhttp_parser_FIND_QUIETLY)
+        MESSAGE(STATUS "Found http_parser: ${LIBHTTP_PARSER_LIBRARY}")
+    ENDIF ()
+ELSE()
+    IF (Libhttp_parser_FIND_REQUIRED)
+        IF(NOT LIBHTTP_PARSER_INCLUDE_DIR)
+            MESSAGE(FATAL_ERROR "Could not find http_parser header file!")
+        ENDIF()
+
+        IF(NOT LIBHTTP_PARSER_LIBRARY)
+            MESSAGE(FATAL_ERROR "Could not find http_parser library file!")
+        ENDIF()
+    ENDIF ()
+ENDIF ()

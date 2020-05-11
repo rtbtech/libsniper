@@ -20,7 +20,8 @@ Currently libsniper is successfully used by several companies:
 
 #### Dependencies
 
-##### xxhash: libxxhash-dev >= 0.6.2
+* **xxhash** - libxxhash-dev >= 0.6.2
+* **net** - libhttp-parser-dev >= 2.9.0
 
 
 #### Performance

@@ -5,7 +5,7 @@ IF (LIBXXHASH_INCLUDE_DIR AND LIBXXHASH_LIBRARY)
     SET(Libxxhash_FOUND TRUE)
 ENDIF ()
 
-IF (Libxxhash)
+IF (Libxxhash_FOUND)
     IF (NOT Libxxhash_FIND_QUIETLY)
         MESSAGE(STATUS "Found xxhash: ${LIBXXHASH_LIBRARY}")
     ENDIF ()
