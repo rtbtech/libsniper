@@ -41,11 +41,11 @@ set(LIB_SRC
     wait/Group.cpp
     )
 
+find_package(fmt REQUIRED)
+
 #Library
 add_library(sniper_${LIB} STATIC ${LIB_SRC})
-# fmt
-#
-
+target_link_libraries(sniper_${LIB} fmt::fmt)
 
 set(DEPENDENCIES "${DEPENDENCIES}" "std" "cache" "log" "event" "net" "pico" PARENT_SCOPE)
 set(SNIPER_LIBRARIES ${SNIPER_LIBRARIES} "sniper_${LIB}" CACHE INTERNAL "sniper_libraries")
