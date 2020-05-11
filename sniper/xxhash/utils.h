@@ -28,7 +28,7 @@ constexpr uint64_t na64 = 6221376636056135903ULL; // xxh64("n/a")
 using xxh64_state_ptr = unique_ptr<XXH64_state_t, decltype(&XXH64_freeState)>;
 
 
-inline uint64_t xxh64(string_view data, uint64_t seed = 0)
+[[nodiscard]] inline uint64_t xxh64(string_view data, uint64_t seed = 0) noexcept
 {
     if (data.empty())
         return seed;
@@ -36,7 +36,7 @@ inline uint64_t xxh64(string_view data, uint64_t seed = 0)
     return XXH64(data.data(), data.size(), seed);
 }
 
-inline uint32_t xxh32(string_view data, uint32_t seed = 0)
+[[nodiscard]] inline uint32_t xxh32(string_view data, uint32_t seed = 0) noexcept
 {
     if (data.empty())
         return seed;
@@ -45,18 +45,18 @@ inline uint32_t xxh32(string_view data, uint32_t seed = 0)
 }
 
 template<typename T>
-inline uint64_t xxh64_int(T data, uint64_t seed = 0)
+[[nodiscard]] inline uint64_t xxh64_int(T data, uint64_t seed = 0) noexcept
 {
     return XXH64((char*)&data, sizeof(T), seed);
 }
 
 template<typename T>
-inline uint32_t xxh32_int(T data, uint32_t seed = 0)
+[[nodiscard]] inline uint32_t xxh32_int(T data, uint32_t seed = 0) noexcept
 {
     return XXH32((char*)&data, sizeof(T), seed);
 }
 
-inline xxh64_state_ptr xxh64_create_state(uint64_t seed = 0)
+[[nodiscard]] inline xxh64_state_ptr xxh64_create_state(uint64_t seed = 0) noexcept
 {
     xxh64_state_ptr state(XXH64_createState(), XXH64_freeState);
     XXH64_reset(state.get(), seed);
@@ -65,19 +65,19 @@ inline xxh64_state_ptr xxh64_create_state(uint64_t seed = 0)
 }
 
 template<typename State>
-inline uint64_t xxh64_digest(const State& state)
+[[nodiscard]] inline uint64_t xxh64_digest(const State& state) noexcept
 {
     return XXH64_digest(state.get());
 }
 
 template<typename State>
-inline void xxh64_update(const State& state, string_view data)
+inline void xxh64_update(const State& state, string_view data) noexcept
 {
     XXH64_update(state.get(), data.data(), data.size());
 }
 
 template<typename State, typename T>
-inline void xxh64_update_int(const State& state, T data)
+inline void xxh64_update_int(const State& state, T data) noexcept
 {
     XXH64_update(state.get(), reinterpret_cast<char*>(&data), sizeof(T));
 }

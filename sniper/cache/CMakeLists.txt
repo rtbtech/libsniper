@@ -12,4 +12,5 @@ set(LIB_HEADERS
     )
 
 
+set(DEPENDENCIES "${DEPENDENCIES}" "std" PARENT_SCOPE)
 add_custom_target(sniper_${LIB} SOURCES ${LIB_HEADERS})

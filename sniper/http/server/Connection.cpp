@@ -72,7 +72,7 @@ void Connection::set(net::Peer peer, int fd) noexcept
     }
 
     _buf = make_buffer(_config->buffer_size);
-    _pico = pico::RequestCache::get_unique();
+    _pico = cache::STDCache<pico::Request>::get_unique();
 
     if (!_buf || !_pico) {
         close();
@@ -295,7 +295,7 @@ void Connection::detach() noexcept
 
 bool parse_buffer(const Config& config, const intrusive_ptr<Buffer>& buf, size_t& processed,
                   vector<tuple<intrusive_ptr<Request>, intrusive_ptr<Response>>>& user,
-                  boost::circular_buffer<intrusive_ptr<Response>>& out, pico::RequestCache::unique& pico) noexcept
+                  boost::circular_buffer<intrusive_ptr<Response>>& out, cache::STDCache<pico::Request>::unique& pico) noexcept
 {
     auto data = buf->tail(processed);
 
@@ -326,7 +326,7 @@ bool parse_buffer(const Config& config, const intrusive_ptr<Buffer>& buf, size_t
             user.emplace_back(req, resp);
             out.push_back(std::move(resp));
 
-            if (pico = pico::RequestCache::get_unique(); !pico)
+            if (pico = cache::STDCache<pico::Request>::get_unique(); !pico)
                 return false;
         }
         else {

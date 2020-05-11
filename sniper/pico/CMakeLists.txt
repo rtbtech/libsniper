@@ -19,4 +19,5 @@ set(LIB_SOURCES
 add_library(sniper_${LIB} STATIC ${LIB_HEADERS} ${LIB_SOURCES})
 target_link_libraries(sniper_${LIB} sniper_strings)
 
+set(DEPENDENCIES "${DEPENDENCIES}" "std" "strings" PARENT_SCOPE)
 set(SNIPER_LIBRARIES ${SNIPER_LIBRARIES} "sniper_${LIB}" CACHE INTERNAL "sniper_libraries")

@@ -85,12 +85,12 @@ private:
     intrusive_ptr<Buffer> _buf;
     boost::circular_buffer<intrusive_ptr<Response>> _out;
     vector<tuple<intrusive_ptr<Request>, intrusive_ptr<Response>>> _user;
-    pico::RequestCache::unique _pico = pico::RequestCache::get_unique_empty();
+    cache::STDCache<pico::Request>::unique _pico = cache::STDCache<pico::Request>::get_unique_empty();
 };
 
 [[nodiscard]] bool parse_buffer(const Config& config, const intrusive_ptr<Buffer>& buf, size_t& processed,
                                 vector<tuple<intrusive_ptr<Request>, intrusive_ptr<Response>>>& user,
                                 boost::circular_buffer<intrusive_ptr<Response>>& out,
-                                pico::RequestCache::unique& pico) noexcept;
+                                cache::STDCache<pico::Request>::unique& pico) noexcept;
 
 } // namespace sniper::http::server

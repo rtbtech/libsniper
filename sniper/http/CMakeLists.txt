@@ -43,8 +43,10 @@ set(LIB_SRC
 
 #Library
 add_library(sniper_${LIB} STATIC ${LIB_SRC})
-target_link_libraries(sniper_${LIB} sniper_event)
-target_link_libraries(sniper_${LIB} sniper_net)
-target_link_libraries(sniper_${LIB} sniper_pico)
+# fmt
+#
 
+
+set(DEPENDENCIES "${DEPENDENCIES}" "std" "cache" "log" "event" "net" "pico" PARENT_SCOPE)
 set(SNIPER_LIBRARIES ${SNIPER_LIBRARIES} "sniper_${LIB}" CACHE INTERNAL "sniper_libraries")
+

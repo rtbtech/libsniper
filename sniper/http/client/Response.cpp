@@ -19,8 +19,8 @@
 
 #include <cstring>
 #include <sniper/log/log.h>
-#include "sniper/http/client/Config.h"
 #include "Response.h"
+#include "Config.h"
 
 namespace sniper::http::client {
 

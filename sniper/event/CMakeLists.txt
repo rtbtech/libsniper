@@ -24,4 +24,5 @@ set(LIB_SOURCES
 #Library
 add_library(sniper_${LIB} STATIC ${LIB_HEADERS} ${LIB_SOURCES})
 
+set(DEPENDENCIES "${DEPENDENCIES}" "std" "net" PARENT_SCOPE)
 set(SNIPER_LIBRARIES ${SNIPER_LIBRARIES} "sniper_${LIB}" CACHE INTERNAL "sniper_libraries")

@@ -106,7 +106,7 @@ const small_vector<pair_sv, pico::MAX_PARAMS>& Request::params() const noexcept
     return _empty_params;
 }
 
-intrusive_ptr<Request> make_request(intrusive_ptr<Buffer> buf, pico::RequestCache::unique&& pico,
+intrusive_ptr<Request> make_request(intrusive_ptr<Buffer> buf, cache::STDCache<pico::Request>::unique&& pico,
                                     string_view body) noexcept
 {
     if (auto req = RequestCache::get_intrusive(); req) {
