@@ -45,7 +45,7 @@ struct Response final : public intrusive_cache_unsafe_ref_counter<Response, Resp
     void add_header_nocopy(string_view header);
     void add_header(cache::String::unique&& header_ptr);
 
-    void set_data_copy(string_view data);
+    void set_data_copy(string_view data) noexcept;
     void set_data_nocopy(string_view data) noexcept;
     void set_data(cache::String::unique&& data_ptr) noexcept;
 

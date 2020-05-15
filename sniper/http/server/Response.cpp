@@ -15,6 +15,7 @@
  */
 
 #include <fmt/format.h>
+#include <sniper/log/log.h>
 #include "Response.h"
 #include "Connection.h"
 
@@ -29,6 +30,8 @@ constexpr string_view content_length_0 = "Content-Length: 0\r\n\r\n";
 
 inline uint32_t fill(string_view str, iovec& i) noexcept
 {
+    log_trace(__PRETTY_FUNCTION__);
+
     i.iov_len = str.size();
     i.iov_base = const_cast<char*>(str.data());
 
@@ -39,6 +42,8 @@ inline uint32_t fill(string_view str, iovec& i) noexcept
 
 void Response::clear() noexcept
 {
+    log_trace(__PRETTY_FUNCTION__);
+
     code = ResponseStatus::NOT_IMPLEMENTED;
 
     _ready = false;
@@ -56,12 +61,16 @@ void Response::clear() noexcept
 
 void Response::add_header_copy(string_view header)
 {
+    log_trace(__PRETTY_FUNCTION__);
+
     if (header.empty())
         return;
 
     if (auto str = cache::StringCache::get_unique(header.size()); str) {
         str->assign(header);
-        _headers.emplace_back(*str, std::move(str));
+
+        auto& h = _headers.emplace_back("", std::move(str));
+        std::get<0>(h) = *std::get<1>(h);
     }
 }
 
@@ -75,38 +84,51 @@ void Response::add_header_nocopy(string_view header)
 
 void Response::add_header(cache::String::unique&& header_ptr)
 {
+    log_trace(__PRETTY_FUNCTION__);
+
     if (!header_ptr)
         return;
 
-    _headers.emplace_back(*header_ptr, std::move(header_ptr));
+    auto& h = _headers.emplace_back("", std::move(header_ptr));
+    std::get<0>(h) = *std::get<1>(h);
 }
 
-void Response::set_data_copy(string_view data)
+void Response::set_data_copy(string_view data) noexcept
 {
+    log_trace(__PRETTY_FUNCTION__);
+
     if (data.empty())
         return;
 
     if (auto str = cache::StringCache::get_unique(data.size()); str) {
         str->assign(data);
-        _data = make_tuple(*str, std::move(str));
+        std::get<1>(_data) = std::move(str);
+        std::get<0>(_data) = *std::get<1>(_data);
     }
 }
 
 void Response::set_data_nocopy(string_view data) noexcept
 {
+    log_trace(__PRETTY_FUNCTION__);
+
     std::get<string_view>(_data) = data;
 }
 
 void Response::set_data(cache::String::unique&& data_ptr) noexcept
 {
+    log_trace(__PRETTY_FUNCTION__);
+
     if (!data_ptr)
         return;
 
-    _data = make_tuple(*data_ptr, std::move(data_ptr));
+    std::get<1>(_data) = std::move(data_ptr);
+    std::get<0>(_data) = *std::get<1>(_data);
 }
 
 bool Response::set_ready() noexcept
 {
+    log_trace(__PRETTY_FUNCTION__);
+
     if (_ready)
         return true;
 
@@ -140,7 +162,8 @@ bool Response::set_ready() noexcept
         str->append(len.data(), len.size());
         str->append("\r\n\r\n");
 
-        _headers.emplace_back(*str, std::move(str));
+        auto& h = _headers.emplace_back("", std::move(str));
+        std::get<0>(h) = *std::get<1>(h);
     }
     else {
         _headers.emplace_back(content_length_0, cache::StringCache::get_unique_empty());
@@ -154,6 +177,8 @@ bool Response::set_ready() noexcept
 
 void Response::fill_iov() noexcept
 {
+    log_trace(__PRETTY_FUNCTION__);
+
     _total_size += fill(_first_header, _iov.emplace_back());
 
     for (auto& h : _headers)
@@ -166,6 +191,9 @@ void Response::fill_iov() noexcept
 
 uint32_t Response::add_iov(iovec* data, size_t max_size) noexcept
 {
+    log_trace("{}, ptr={}, max_count={}, iov count={}, processed={}", __PRETTY_FUNCTION__, (void*)data, max_size,
+              _iov.size(), _processed);
+
     if (auto count = (_iov.size() - _processed); count && count <= max_size) {
         memcpy(data, _iov.data() + _processed, count * sizeof(iovec));
         return count;
@@ -176,6 +204,8 @@ uint32_t Response::add_iov(iovec* data, size_t max_size) noexcept
 
 bool Response::process_iov(ssize_t& size) noexcept
 {
+    log_trace("{}, size={}, total_size={}, processed={}", __PRETTY_FUNCTION__, size, _total_size, _processed);
+
     if (_total_size <= size) {
         size -= _total_size;
         return true;

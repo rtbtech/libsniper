@@ -30,6 +30,8 @@ namespace sniper::http::server {
 Connection::Connection(event::loop_ptr loop, intrusive_ptr<Pool> pool, intrusive_ptr<Config> config) :
     _loop(std::move(loop)), _pool(std::move(pool)), _config(std::move(config))
 {
+    log_trace(__PRETTY_FUNCTION__);
+
     check(_loop, "Loop is nullptr");
     check(_pool, "Pool is nullptr");
     check(_pool->_cb, "Callback not set");
@@ -62,6 +64,8 @@ net::Peer Connection::peer() const noexcept
 
 void Connection::set(net::Peer peer, int fd) noexcept
 {
+    log_trace(__PRETTY_FUNCTION__);
+
     _peer = peer;
     _fd = fd;
     _closed = false;
@@ -87,6 +91,8 @@ void Connection::set(net::Peer peer, int fd) noexcept
 // internal call only from async callbacks
 void Connection::close() noexcept
 {
+    log_trace(__PRETTY_FUNCTION__);
+
     _w_read.stop();
     _w_write.stop();
     _w_close.stop();
@@ -111,6 +117,8 @@ void Connection::close() noexcept
 // call from user
 void Connection::disconnect() noexcept
 {
+    log_trace(__PRETTY_FUNCTION__);
+
     if (!_closed && !_w_close.is_active()) {
         _w_close.start();
         _w_close.feed_event(0);
@@ -119,12 +127,16 @@ void Connection::disconnect() noexcept
 
 void Connection::cb_close(ev::prepare& w, int revents) noexcept
 {
+    log_trace(__PRETTY_FUNCTION__);
+
     if (!_closed)
         close();
 }
 
 void Connection::cb_read(ev::io& w, int revents) noexcept
 {
+    log_trace(__PRETTY_FUNCTION__);
+
     if (_closed)
         return;
 
@@ -163,6 +175,8 @@ void Connection::cb_read(ev::io& w, int revents) noexcept
 
 WriteState Connection::cb_writev_int(ev::io& w) noexcept
 {
+    log_trace(__PRETTY_FUNCTION__);
+
     while (!_out.empty() && _out.front()->_ready) {
         std::array<iovec, 1024> iov{};
         uint32_t iov_count = 0;
@@ -208,6 +222,8 @@ WriteState Connection::cb_writev_int(ev::io& w) noexcept
 
 void Connection::cb_write(ev::io& w, int revents) noexcept
 {
+    log_trace(__PRETTY_FUNCTION__);
+
     if (_closed)
         return;
 
@@ -217,6 +233,8 @@ void Connection::cb_write(ev::io& w, int revents) noexcept
 
 void Connection::cb_user(ev::prepare& w, int revents) noexcept
 {
+    log_trace(__PRETTY_FUNCTION__);
+
     if (_closed || _user.empty())
         return;
 
@@ -257,11 +275,15 @@ void Connection::cb_user(ev::prepare& w, int revents) noexcept
 
 void Connection::cb_keep_alive_timeout(ev::timer& w, int revents) noexcept
 {
+    log_trace(__PRETTY_FUNCTION__);
+
     close();
 }
 
 void Connection::send(const intrusive_ptr<Response>& resp) noexcept
 {
+    log_trace(__PRETTY_FUNCTION__);
+
     if (resp && !_closed) {
         if (_config->add_server_header)
             resp->add_header_nocopy(_server_name_header);
@@ -287,6 +309,8 @@ void Connection::send(const intrusive_ptr<Response>& resp) noexcept
 // call from pool close
 void Connection::detach() noexcept
 {
+    log_trace(__PRETTY_FUNCTION__);
+
     _pool.reset();
 
     if (!_closed)
@@ -295,8 +319,11 @@ void Connection::detach() noexcept
 
 bool parse_buffer(const Config& config, const intrusive_ptr<Buffer>& buf, size_t& processed,
                   vector<tuple<intrusive_ptr<Request>, intrusive_ptr<Response>>>& user,
-                  boost::circular_buffer<intrusive_ptr<Response>>& out, cache::STDCache<pico::Request>::unique& pico) noexcept
+                  boost::circular_buffer<intrusive_ptr<Response>>& out,
+                  cache::STDCache<pico::Request>::unique& pico) noexcept
 {
+    log_trace(__PRETTY_FUNCTION__);
+
     auto data = buf->tail(processed);
 
     while (!data.empty()) {
