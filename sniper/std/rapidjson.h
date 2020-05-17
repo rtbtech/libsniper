@@ -17,57 +17,57 @@
 #pragma once
 
 #include <rapidjson/document.h>
-#include <string_view>
+#include <sniper/std/string.h>
 
-namespace sniper {
+namespace sniper::json {
 
 template<typename T>
-inline bool is_string(const T& json, std::string_view key)
+[[nodiscard]] inline bool is_string(const T& json, string_view key) noexcept
 {
     return json.HasMember(key) && json[key].IsString() && json[key].GetStringLength();
 }
 
 template<typename T>
-inline bool is_num(const T& json, std::string_view key)
+[[nodiscard]] inline bool is_num(const T& json, string_view key) noexcept
 {
     return json.HasMember(key) && json[key].IsNumber();
 }
 
 template<typename T>
-inline bool is_obj(const T& json, std::string_view key)
+[[nodiscard]] inline bool is_obj(const T& json, string_view key) noexcept
 {
     return json.HasMember(key) && json[key].IsObject();
 }
 
 template<typename T>
-inline bool is_array(const T& json, std::string_view key)
+[[nodiscard]] inline bool is_array(const T& json, string_view key) noexcept
 {
     return json.HasMember(key) && json[key].IsArray();
 }
 
 template<typename T>
-inline std::string_view get_string(const T& json, std::string_view key)
+[[nodiscard]] inline string_view get_string(const T& json, string_view key) noexcept
 {
-    return std::string_view(json[key].GetString(), json[key].GetStringLength());
+    return string_view(json[key].GetString(), json[key].GetStringLength());
 }
 
 template<typename T>
-inline std::string_view get_string_or_empty(const T& json, std::string_view key)
+[[nodiscard]] inline string_view get_string(const T& json, string_view key, string_view default_str) noexcept
 {
     if (is_string(json, key))
         return get_string(json, key);
 
-    return {};
+    return default_str;
 }
 
 template<typename T>
-inline int64_t get_int64(const T& json, std::string_view key)
+[[nodiscard]] inline int64_t get_int64(const T& json, string_view key) noexcept
 {
     return json[key].GetInt64();
 }
 
 template<typename T>
-inline int64_t get_int64(const T& json, std::string_view key, int64_t default_int)
+[[nodiscard]] inline int64_t get_int64(const T& json, string_view key, int64_t default_int) noexcept
 {
     if (is_num(json, key))
         return get_int64(json, key);
@@ -75,4 +75,4 @@ inline int64_t get_int64(const T& json, std::string_view key, int64_t default_in
     return default_int;
 }
 
-} // namespace sniper
+} // namespace sniper::json
