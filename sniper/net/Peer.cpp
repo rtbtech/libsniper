@@ -75,6 +75,11 @@ uint32_t Peer::ip() const noexcept
     return get<uint32_t>(_peer);
 }
 
+string Peer::ip_str() const
+{
+    return *this ? ip_to_str(get<uint32_t>(_peer)) : "";
+}
+
 uint16_t Peer::port() const noexcept
 {
     return get<uint16_t>(_peer);

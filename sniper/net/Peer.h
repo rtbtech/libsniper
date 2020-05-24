@@ -33,6 +33,7 @@ public:
     Peer(const Peer& p);
     Peer(Peer&& p) noexcept;
 
+    [[nodiscard]] string ip_str() const;
     [[nodiscard]] uint32_t ip() const noexcept;
     [[nodiscard]] uint16_t port() const noexcept;
     [[nodiscard]] uint64_t hash() const noexcept;
