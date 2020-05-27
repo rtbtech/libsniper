@@ -46,7 +46,7 @@ Server::Server(event::loop_ptr loop, intrusive_ptr<server::Config> config) :
         _config = server::make_config();
     check(_config, "[Server] config is nullptr");
 
-    _pool = make_intrusive<server::Pool>(_config);
+    _pool = make_intrusive_noexcept<server::Pool>(_config);
     check(_pool, "[Server] pool is nullptr");
 
     _w_date.set(*_loop);

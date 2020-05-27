@@ -20,59 +20,55 @@
 #include <sniper/cache/ArrayCache.h>
 #include <sniper/log/log.h>
 #include <sniper/std/check.h>
-#include "Wait.h"
+#include "Pool.h"
+#include "Group.h"
 
-namespace sniper::http {
+namespace sniper::event::wait {
 
-static constexpr seconds clean_interval = 1s;
-
-Wait::Wait(event::loop_ptr loop) : _loop(std::move(loop))
+Pool::Pool(event::loop_ptr loop) : _loop(std::move(loop))
 {
-    log_trace(__PRETTY_FUNCTION__);
-
     _w_done.set(*_loop);
-    _w_done.set<Wait, &Wait::cb_done>(this);
+    _w_done.set<Pool, &Pool::cb_done>(this);
 }
 
-Wait::~Wait() noexcept
+Pool::~Pool()
 {
-    log_trace(__PRETTY_FUNCTION__);
+    close();
+}
+
+void Pool::close() noexcept
+{
+    _w_done.stop();
 
     for (auto& wg : _groups)
-        wg.second->stop();
+        wg.second->detach();
+
+    _groups.clear();
+    _done.clear();
 }
 
-void Wait::add(intrusive_ptr<wait::Group> wg)
+void Pool::add(intrusive_ptr<Group>&& wg)
 {
-    log_trace(__PRETTY_FUNCTION__);
-
-    check(wg, "[Wait] wait group is nullptr");
-    check(wg->timeout > 0ms || wg->count, "[Wait] group without conditions");
+    if (!wg || wg->_timeout == 0ms || !wg->_count) {
+        wg->clear();
+        return;
+    }
 
     wg->set(*_loop);
-    wg->set<Wait, &Wait::cb_timeout>(this);
-    if (wg->timeout > 0ms)
-        wg->start((double)wg->timeout.count() / 1000.0);
+    wg->set<Pool, &Pool::cb_timeout>(this);
+    if (wg->_timeout > 0ms)
+        wg->start((double)wg->_timeout.count() / 1000.0);
 
     _groups.emplace(wg.get(), std::move(wg));
 }
 
-void Wait::done(const intrusive_ptr<wait::Group>& wg)
+void Pool::done(Group* wg)
 {
-    log_trace(__PRETTY_FUNCTION__);
-
     check(wg, "[Wait] wait group is nullptr");
 
-    if (wg->is_timeout())
-        return;
-
-    if (wg->count)
-        wg->count--;
-
-    if (!wg->count) {
-        wg->stop();
-        _groups.erase(wg.get());
-        _done.emplace_back(wg);
+    if (auto it = _groups.find(wg); it != _groups.end()) {
+        _done.emplace_back(std::move(it->second));
+        _groups.erase(it);
 
         if (!_w_done.is_active()) {
             _w_done.start();
@@ -81,7 +77,7 @@ void Wait::done(const intrusive_ptr<wait::Group>& wg)
     }
 }
 
-void Wait::cb_timeout(ev::timer& w, int revents) noexcept
+void Pool::cb_timeout(ev::timer& w, int revents) noexcept
 {
     log_trace(__PRETTY_FUNCTION__);
 
@@ -101,7 +97,7 @@ void Wait::cb_timeout(ev::timer& w, int revents) noexcept
     }
 }
 
-void Wait::cb_done(ev::prepare& w, int revents) noexcept
+void Pool::cb_done(ev::prepare& w, int revents) noexcept
 {
     log_trace(__PRETTY_FUNCTION__);
 
@@ -128,4 +124,5 @@ void Wait::cb_done(ev::prepare& w, int revents) noexcept
     }
 }
 
-} // namespace sniper::http
+
+} // namespace sniper::event::wait

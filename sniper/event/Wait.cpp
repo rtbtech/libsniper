@@ -17,29 +17,34 @@
  * limitations under the License.
  */
 
-#include "Group.h"
+#include <sniper/log/log.h>
+#include <sniper/std/check.h>
+#include "Wait.h"
 
-namespace sniper::http::wait {
+namespace sniper::event {
 
-void Group::clear() noexcept
+static constexpr seconds clean_interval = 1s;
+
+Wait::Wait(event::loop_ptr loop) : _pool(make_intrusive_noexcept<wait::Pool>(std::move(loop)))
 {
-    timeout = 0ms;
-    count = 0;
-    _is_timeout = false;
+    log_trace(__PRETTY_FUNCTION__);
 
-    release(); // call clear from derived class
+    check(_pool, "[Wait] pool is nullptr");
 }
 
-void Group::release() noexcept {}
-
-bool Group::is_timeout() const noexcept
+Wait::~Wait() noexcept
 {
-    return _is_timeout;
+    log_trace(__PRETTY_FUNCTION__);
+
+    _pool->close();
 }
 
-void Group::set_timeout() noexcept
+void Wait::add(intrusive_ptr<wait::Group> wg)
 {
-    _is_timeout = true;
+    log_trace(__PRETTY_FUNCTION__);
+
+    wg->_pool = _pool;
+    _pool->add(std::move(wg));
 }
 
-} // namespace sniper::http::wait
+} // namespace sniper::event

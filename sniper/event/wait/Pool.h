@@ -17,24 +17,25 @@
 #pragma once
 
 #include <sniper/event/Loop.h>
-#include <sniper/http/wait/Group.h>
 #include <sniper/std/functional.h>
 #include <sniper/std/map.h>
+#include <sniper/std/memory.h>
 #include <sniper/std/vector.h>
 
-namespace sniper::http {
+namespace sniper::event::wait {
 
-class Wait final
+class Group;
+
+struct Pool final : public intrusive_unsafe_ref_counter<Pool>
 {
-public:
-    explicit Wait(event::loop_ptr loop);
-    virtual ~Wait() noexcept;
+    Pool(event::loop_ptr loop);
+    ~Pool();
 
-    void add(intrusive_ptr<wait::Group> wg);
-    void done(const intrusive_ptr<wait::Group>& wg);
+    void add(intrusive_ptr<Group>&& wg);
+    void done(Group* wg);
+    void close() noexcept;
 
-    template<typename T>
-    void set_cb(T&& cb);
+    function<void(intrusive_ptr<Group>&&)> _cb;
 
 private:
     void cb_timeout(ev::timer& w, [[maybe_unused]] int revents) noexcept;
@@ -43,15 +44,8 @@ private:
     event::loop_ptr _loop;
     ev::prepare _w_done;
 
-    function<void(intrusive_ptr<wait::Group>&&)> _cb;
-    unordered_map<wait::Group*, intrusive_ptr<wait::Group>> _groups;
-    vector<intrusive_ptr<wait::Group>> _done;
+    unordered_map<Group*, intrusive_ptr<Group>> _groups;
+    vector<intrusive_ptr<Group>> _done;
 };
 
-template<typename T>
-void Wait::set_cb(T&& cb)
-{
-    _cb = std::forward<T>(cb);
-}
-
-} // namespace sniper::http
+} // namespace sniper::event::wait

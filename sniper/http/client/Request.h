@@ -18,7 +18,7 @@
 
 #include <sniper/cache/ArrayCache.h>
 #include <sniper/cache/Cache.h>
-#include <sniper/http/wait/Group.h>
+#include <sniper/event/wait/Group.h>
 #include <sniper/net/Url.h>
 #include <sniper/std/any.h>
 #include <sniper/std/chrono.h>
@@ -80,7 +80,7 @@ public:
 
     string close_reason;
 
-    intrusive_ptr<wait::Group> wg;
+    intrusive_ptr<event::wait::Group> wg;
 
 private:
     friend class Connection;

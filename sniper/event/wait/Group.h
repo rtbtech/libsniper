@@ -18,11 +18,12 @@
 
 #include <ev++.h>
 #include <sniper/cache/Cache.h>
+#include <sniper/event/wait/Pool.h>
 #include <sniper/std/chrono.h>
 #include <sniper/std/memory.h>
 #include <sniper/std/tuple.h>
 
-namespace sniper::http::wait {
+namespace sniper::event::wait {
 
 class Group;
 using GroupCache = cache::STDCache<Group>;
@@ -34,16 +35,29 @@ public:
     virtual ~Group() noexcept = default;
 
     void clear() noexcept;
-    virtual void release() noexcept; // clear method for derived class
-    void set_timeout() noexcept;
-
+    void done();
     [[nodiscard]] bool is_timeout() const noexcept;
 
-    milliseconds timeout = 0ms;
-    unsigned count = 0;
+    intrusive_ptr<wait::Pool> _pool;
+
+protected:
+    virtual void release() noexcept; // clear method for derived class
 
 private:
+    friend struct Pool;
+
+    template<class T>
+    friend inline intrusive_ptr<T> make_group(unsigned count);
+
+    template<class T>
+    friend inline intrusive_ptr<T> make_group(unsigned count, milliseconds timeout);
+
+    void set_timeout() noexcept;
+    void detach() noexcept;
+
     bool _is_timeout = false;
+    milliseconds _timeout = 0ms;
+    unsigned _count = 0;
 };
 
 using GroupPtr = intrusive_ptr<Group>;
@@ -54,13 +68,26 @@ inline intrusive_ptr<Group> make_group()
 }
 
 template<class T>
-inline intrusive_ptr<T> make_group(unsigned count, milliseconds timeout = 0ms)
+inline intrusive_ptr<T> make_group(unsigned count)
 {
-    auto ptr = cache::STDCache<T>::get_intrusive();
-    ptr->count = count;
-    ptr->timeout = timeout;
+    if (auto ptr = cache::STDCache<T>::get_intrusive(); ptr) {
+        ptr->_count = count;
+        return ptr;
+    }
 
-    return ptr;
+    return nullptr;
 }
 
-} // namespace sniper::http::wait
+template<class T>
+inline intrusive_ptr<T> make_group(unsigned count, milliseconds timeout)
+{
+    if (auto ptr = cache::STDCache<T>::get_intrusive(); ptr) {
+        ptr->_count = count;
+        ptr->_timeout = timeout;
+        return ptr;
+    }
+
+    return nullptr;
+}
+
+} // namespace sniper::event::wait
