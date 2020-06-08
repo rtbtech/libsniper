@@ -35,8 +35,10 @@ public:
     virtual ~Group() noexcept = default;
 
     void clear() noexcept;
+    void inc(unsigned count = 1) noexcept;
     void done();
     [[nodiscard]] bool is_timeout() const noexcept;
+    [[nodiscard]] bool is_empty() const noexcept;
 
     intrusive_ptr<wait::Pool> _pool;
 
@@ -51,6 +53,9 @@ private:
 
     template<class T>
     friend inline intrusive_ptr<T> make_group(unsigned count, milliseconds timeout);
+
+    template<class T>
+    friend inline intrusive_ptr<T> make_group(milliseconds timeout);
 
     void set_timeout() noexcept;
     void detach() noexcept;
@@ -68,6 +73,18 @@ inline intrusive_ptr<Group> make_group()
 }
 
 template<class T>
+inline intrusive_ptr<T> make_group(unsigned count, milliseconds timeout)
+{
+    if (auto ptr = cache::STDCache<T>::get_intrusive(); ptr) {
+        ptr->_count = count;
+        ptr->_timeout = timeout;
+        return ptr;
+    }
+
+    return nullptr;
+}
+
+template<class T>
 inline intrusive_ptr<T> make_group(unsigned count)
 {
     if (auto ptr = cache::STDCache<T>::get_intrusive(); ptr) {
@@ -79,10 +96,9 @@ inline intrusive_ptr<T> make_group(unsigned count)
 }
 
 template<class T>
-inline intrusive_ptr<T> make_group(unsigned count, milliseconds timeout)
+inline intrusive_ptr<T> make_group(milliseconds timeout)
 {
     if (auto ptr = cache::STDCache<T>::get_intrusive(); ptr) {
-        ptr->_count = count;
         ptr->_timeout = timeout;
         return ptr;
     }

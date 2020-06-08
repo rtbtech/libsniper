@@ -49,4 +49,21 @@ inline void bin2hex_append(string_view src, string& dst) noexcept
 // return start, len
 tuple<size_t, size_t> hex2bin_append(string_view src, string& dst);
 
+template<typename I>
+inline void int2hex_append(I w, string& dst)
+{
+    static const char hex[] = "0123456789abcdef";
+
+    size_t hex_len = sizeof(I) << 1ull;
+
+    for (size_t i = 0, j = (hex_len - 1) * 4; i < hex_len; ++i, j -= 4) {
+        uint8_t idx = (w >> j) & 0x0f;
+
+        if (!idx && dst.empty())
+            continue;
+
+        dst.push_back(hex[idx]);
+    }
+}
+
 } // namespace sniper::strings

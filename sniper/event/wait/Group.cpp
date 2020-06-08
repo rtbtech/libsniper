@@ -63,4 +63,14 @@ void Group::done()
     }
 }
 
+void Group::inc(unsigned count) noexcept
+{
+    _count += count;
+}
+
+bool Group::is_empty() const noexcept
+{
+    return !_count;
+}
+
 } // namespace sniper::event::wait
