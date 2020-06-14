@@ -131,6 +131,7 @@ void Request::clear()
     user_data.reset();
     user_int = std::nullopt;
     user_string.clear();
+    id = {};
 
     close_reason.clear();
 

@@ -77,6 +77,7 @@ public:
     any user_data;
     optional<int64_t> user_int;
     string user_string;
+    string_view id;
 
     string close_reason;
 
