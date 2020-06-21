@@ -66,4 +66,12 @@ inline void int2hex_append(I w, string& dst)
     }
 }
 
+template<typename I>
+[[nodiscard]] inline string int2hex(I w)
+{
+    string dst;
+    int2hex_append(w, dst);
+    return dst;
+}
+
 } // namespace sniper::strings

@@ -28,9 +28,21 @@ template<typename T>
 }
 
 template<typename T>
+[[nodiscard]] inline bool is_string(const T& json) noexcept
+{
+    return json.IsString() && json.GetStringLength();
+}
+
+template<typename T>
 [[nodiscard]] inline bool is_num(const T& json, string_view key) noexcept
 {
     return json.HasMember(key) && json[key].IsNumber();
+}
+
+template<typename T>
+[[nodiscard]] inline bool is_bool(const T& json, string_view key) noexcept
+{
+    return json.HasMember(key) && json[key].IsBool();
 }
 
 template<typename T>
@@ -46,18 +58,24 @@ template<typename T>
 }
 
 template<typename T>
-[[nodiscard]] inline string_view get_string(const T& json, string_view key) noexcept
+[[nodiscard]] inline string_view get_sv(const T& json, string_view key) noexcept
 {
     return string_view(json[key].GetString(), json[key].GetStringLength());
 }
 
 template<typename T>
-[[nodiscard]] inline string_view get_string(const T& json, string_view key, string_view default_str) noexcept
+[[nodiscard]] inline string_view get_sv(const T& json, string_view key, string_view default_str) noexcept
 {
     if (is_string(json, key))
         return get_string(json, key);
 
     return default_str;
+}
+
+template<typename T>
+[[nodiscard]] inline string get_string(const T& json, string_view key) noexcept
+{
+    return string(json[key].GetString(), json[key].GetStringLength());
 }
 
 template<typename T>
@@ -67,12 +85,42 @@ template<typename T>
 }
 
 template<typename T>
+[[nodiscard]] inline int64_t get_int32(const T& json, string_view key) noexcept
+{
+    return json[key].GetInt();
+}
+
+template<typename T>
 [[nodiscard]] inline int64_t get_int64(const T& json, string_view key, int64_t default_int) noexcept
 {
     if (is_num(json, key))
         return get_int64(json, key);
 
     return default_int;
+}
+
+template<typename T>
+[[nodiscard]] inline int32_t get_int32(const T& json, string_view key, int32_t default_int) noexcept
+{
+    if (is_num(json, key))
+        return get_int32(json, key);
+
+    return default_int;
+}
+
+template<typename T>
+[[nodiscard]] inline bool get_bool(const T& json, string_view key) noexcept
+{
+    return json[key].GetBool();
+}
+
+template<typename T>
+[[nodiscard]] inline bool get_bool(const T& json, string_view key, bool default_value) noexcept
+{
+    if (is_bool(json, key))
+        return get_bool(json, key);
+
+    return default_value;
 }
 
 } // namespace sniper::json
