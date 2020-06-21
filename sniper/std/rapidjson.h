@@ -67,7 +67,7 @@ template<typename T>
 [[nodiscard]] inline string_view get_sv(const T& json, string_view key, string_view default_str) noexcept
 {
     if (is_string(json, key))
-        return get_string(json, key);
+        return get_sv(json, key);
 
     return default_str;
 }
