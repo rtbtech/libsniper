@@ -79,6 +79,15 @@ template<typename T>
 }
 
 template<typename T>
+[[nodiscard]] inline string get_string(const T& json, string_view key, const string& default_str) noexcept
+{
+    if (is_string(json, key))
+        return string(json[key].GetString(), json[key].GetStringLength());
+
+    return default_str;
+}
+
+template<typename T>
 [[nodiscard]] inline int64_t get_int64(const T& json, string_view key) noexcept
 {
     return json[key].GetInt64();
