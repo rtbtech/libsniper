@@ -1,5 +1,5 @@
 FIND_PATH(LIBHTTP_PARSER_INCLUDE_DIR http_parser.h /usr/local/include /opt/local/include /usr/include)
-FIND_LIBRARY(LIBHTTP_PARSER_LIBRARY NAMES libhttp_parser.a PATH /usr/local/lib /opt/local/lib /usr/lib)
+FIND_LIBRARY(LIBHTTP_PARSER_LIBRARY NAMES libhttp_parser.a libhttp_parser.dylib PATH /usr/local/lib /opt/local/lib /usr/lib)
 
 IF (LIBHTTP_PARSER_INCLUDE_DIR AND LIBHTTP_PARSER_LIBRARY)
     SET(Libhttp_parser_FOUND TRUE)

@@ -1,5 +1,5 @@
 FIND_PATH(LIBXXHASH_INCLUDE_DIR xxhash.h /usr/local/include /opt/local/include /usr/include)
-FIND_LIBRARY(LIBXXHASH_LIBRARY NAMES libxxhash.a PATH /usr/local/lib /opt/local/lib /usr/lib)
+FIND_LIBRARY(LIBXXHASH_LIBRARY NAMES libxxhash.a libxxhash.dylib PATH /usr/local/lib /opt/local/lib /usr/lib)
 
 IF (LIBXXHASH_INCLUDE_DIR AND LIBXXHASH_LIBRARY)
     SET(Libxxhash_FOUND TRUE)
