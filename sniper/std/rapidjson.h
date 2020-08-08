@@ -64,6 +64,12 @@ template<typename T>
 }
 
 template<typename T>
+[[nodiscard]] inline string_view get_sv(const T& json) noexcept
+{
+    return string_view(json.GetString(), json.GetStringLength());
+}
+
+template<typename T>
 [[nodiscard]] inline string_view get_sv(const T& json, string_view key, string_view default_str) noexcept
 {
     if (is_string(json, key))
@@ -76,6 +82,12 @@ template<typename T>
 [[nodiscard]] inline string get_string(const T& json, string_view key) noexcept
 {
     return string(json[key].GetString(), json[key].GetStringLength());
+}
+
+template<typename T>
+[[nodiscard]] inline string get_string(const T& json) noexcept
+{
+    return string(json.GetString(), json.GetStringLength());
 }
 
 template<typename T>
