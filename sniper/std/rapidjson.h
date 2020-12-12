@@ -144,4 +144,10 @@ template<typename T>
     return default_value;
 }
 
+template<typename T>
+[[nodiscard]] inline double get_double(const T& json, string_view key) noexcept
+{
+    return json[key].GetDouble();
+}
+
 } // namespace sniper::json
