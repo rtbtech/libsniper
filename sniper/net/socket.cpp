@@ -270,6 +270,11 @@ int accept4(int server_fd, uint32_t& ip, uint16_t& port)
         return -1;
     }
 
+#ifdef __APPLE__
+    int fd = accept(server_fd, ip, port);
+    if (!set_non_blocking(fd))
+        return -1;
+#else
     sockaddr_in servaddr{};
     memset(&servaddr, 0, sizeof(servaddr));
 
@@ -279,6 +284,7 @@ int accept4(int server_fd, uint32_t& ip, uint16_t& port)
         ip = servaddr.sin_addr.s_addr;
         port = ntohs(servaddr.sin_port);
     }
+#endif
 
     return fd;
 }

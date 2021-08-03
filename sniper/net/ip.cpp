@@ -126,6 +126,24 @@ bool ip_from_sv(string_view str, uint32_t& dst)
     return inet_pton(AF_INET, buf.data(), &dst) == 1;
 }
 
+#ifdef __APPLE__
+small_vector<uint32_t, 8> resolve_domain(const string& domain)
+{
+    small_vector<uint32_t, 8> ip;
+
+    if (domain.empty())
+        return ip;
+
+    auto* h = gethostbyname(domain.c_str());
+    if (h && h->h_addrtype == AF_INET) {
+        auto** addr_list = (struct in_addr**)h->h_addr_list;
+        for (size_t i = 0; addr_list[i] != nullptr; i++)
+            ip.emplace_back(addr_list[i]->s_addr);
+    }
+
+    return ip;
+}
+#else
 small_vector<uint32_t, 8> resolve_domain(const string& domain)
 {
     small_vector<uint32_t, 8> ip;
@@ -162,5 +180,6 @@ small_vector<uint32_t, 8> resolve_domain(const string& domain)
     free(buf);
     return ip;
 }
+#endif
 
 } // namespace sniper::net

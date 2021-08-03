@@ -1,5 +1,5 @@
 FIND_PATH(LIBRE2_INCLUDE_DIR re2/re2.h /usr/local/include /opt/local/include /usr/include)
-FIND_LIBRARY(LIBRE2_LIBRARY NAMES libre2.a PATH /usr/local/lib /opt/local/lib /usr/lib)
+FIND_LIBRARY(LIBRE2_LIBRARY NAMES libre2.a libre2.dylib PATH /usr/local/lib /opt/local/lib /usr/lib)
 
 IF (LIBRE2_INCLUDE_DIR AND LIBRE2_LIBRARY)
     SET(LIBRE2_FOUND TRUE)

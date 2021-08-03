@@ -23,6 +23,7 @@
 #include <boost/smart_ptr/local_shared_ptr.hpp>
 #include <boost/smart_ptr/make_local_shared.hpp>
 #include <boost/smart_ptr/make_shared.hpp>
+#include <boost/version.hpp>
 #include <memory>
 #include <sniper/std/intrusive_cache.h>
 
@@ -71,6 +72,7 @@ inline intrusive_ptr<T> make_intrusive_noexcept(_Args&&... __args) noexcept
 
 } // namespace sniper
 
+#if BOOST_VERSION <= 107500
 namespace std {
 
 template<typename T>
@@ -80,3 +82,4 @@ struct hash<sniper::intrusive_ptr<T>>
 };
 
 } // namespace std
+#endif
