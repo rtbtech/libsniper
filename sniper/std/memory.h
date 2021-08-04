@@ -72,7 +72,7 @@ inline intrusive_ptr<T> make_intrusive_noexcept(_Args&&... __args) noexcept
 
 } // namespace sniper
 
-#if BOOST_VERSION <= 107500
+#if BOOST_VERSION < 107500
 namespace std {
 
 template<typename T>
