@@ -1,5 +1,6 @@
 libsniper is a small, very fast C++ framework for writing highload HTTP services (f.e. RTB services)
 ------------------------------------------------
+**TOP 15 fastest http server libraries in the world!**
 
 Currently libsniper is successfully used by several companies:
 - as framework for DSP (Demand Side Platform) at [MediaSniper](https://mediasniper.ru/index.php?lang=en) and [AdSniper](https://adsniper.ru/). Serves more than 300K qps.
@@ -15,6 +16,8 @@ Currently libsniper is successfully used by several companies:
 * Graceful server shutdown
 
 #### [TechEmpower benchmark](https://github.com/TechEmpower/FrameworkBenchmarks/tree/master/frameworks/C%2B%2B/libsniper)
+
+#### [TechEmpower Benchmark round 20 results (15th place!)](https://www.techempower.com/benchmarks/#section=data-r20&hw=ph&test=plaintext)
 
 #### [Examples](https://github.com/rtbtech/libsniper_examples)
 
