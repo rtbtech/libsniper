@@ -31,7 +31,7 @@ inline void _log(FILE* out, string_view level, const char* fmt, const Args&... a
     seconds s = duration_cast<seconds>(ms);
 
     fmt::memory_buffer buf;
-    fmt::format_to(buf, fmt, args...);
+    fmt::format_to(fmt::appender(buf), fmt::runtime(fmt), args...);
     fmt::print(out, "[{:%Y-%m-%d %H:%M:%S}.{}] [{}] {}\n", fmt::localtime(s.count()), ms.count() % 1000, level,
                string_view(buf.data(), buf.size()));
     fflush(out);

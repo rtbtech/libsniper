@@ -47,7 +47,7 @@ template<typename Cond, typename Format, typename... Args>
 inline void check(const Cond& cond, Format fmt, const Args&... args)
 {
     if (!cond)
-        throw std::runtime_error{fmt::format(fmt, args...) + "\n"
+        throw std::runtime_error{fmt::format(fmt::runtime(fmt), args...) + "\n"
                                  + stacktrace_to_string(boost::stacktrace::stacktrace())};
 }
 
