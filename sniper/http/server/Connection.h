@@ -93,4 +93,6 @@ private:
                                 boost::circular_buffer<intrusive_ptr<Response>>& out,
                                 cache::STDCache<pico::Request>::unique& pico) noexcept;
 
+using ConnectionPtr = intrusive_ptr<Connection>;
+
 } // namespace sniper::http::server

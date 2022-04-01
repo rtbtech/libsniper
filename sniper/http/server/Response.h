@@ -82,4 +82,6 @@ private:
     return nullptr;
 }
 
+using ResponsePtr = intrusive_ptr<Response>;
+
 } // namespace sniper::http::server

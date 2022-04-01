@@ -62,4 +62,6 @@ private:
 [[nodiscard]] intrusive_ptr<Request>
 make_request(intrusive_ptr<Buffer> buf, cache::STDCache<pico::Request>::unique&& pico, string_view body = {}) noexcept;
 
+using RequestPtr = intrusive_ptr<Request>;
+
 } // namespace sniper::http::server
