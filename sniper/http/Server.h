@@ -30,7 +30,9 @@ namespace sniper::http {
 class Server final
 {
 public:
-    explicit Server(event::loop_ptr loop, intrusive_ptr<server::Config> config = nullptr);
+    explicit Server(event::loop_ptr loop);
+    explicit Server(event::loop_ptr loop, const server::Config& config);
+    explicit Server(event::loop_ptr loop, intrusive_ptr<server::Config> config);
     ~Server() noexcept;
 
     template<typename T>

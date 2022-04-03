@@ -37,6 +37,17 @@ local_ptr<string> gen_date() noexcept
 
 } // namespace
 
+Server::Server(event::loop_ptr loop) : Server(std::move(loop), nullptr)
+{
+    //
+}
+
+Server::Server(event::loop_ptr loop, const server::Config& config) :
+    Server(std::move(loop), make_intrusive_noexcept<server::Config>(config))
+{
+    //
+}
+
 Server::Server(event::loop_ptr loop, intrusive_ptr<server::Config> config) :
     _loop(std::move(loop)), _config(std::move(config))
 {
@@ -44,6 +55,7 @@ Server::Server(event::loop_ptr loop, intrusive_ptr<server::Config> config) :
 
     if (!_config)
         _config = server::make_config();
+
     check(_config, "[Server] config is nullptr");
 
     _pool = make_intrusive_noexcept<server::Pool>(_config);
