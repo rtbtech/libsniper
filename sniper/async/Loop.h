@@ -14,8 +14,23 @@
  * limitations under the License.
  */
 
-#include <sniper/async/postgres/Response.h>
+#pragma once
 
-namespace sniper::async::postgres {
-//
-} // namespace sniper::async::postgres
+#include <ev++.h>
+#include <sniper/std/memory.h>
+
+namespace sniper::async {
+
+struct Loop : public ev::dynamic_loop, intrusive_unsafe_ref_counter<Loop>
+{
+    explicit Loop(unsigned int flags = ev::AUTO) : ev::dynamic_loop(flags) {}
+};
+
+using loop_ptr = intrusive_ptr<Loop>;
+
+inline loop_ptr make_loop(unsigned int flags = ev::AUTO)
+{
+    return make_intrusive<Loop>(flags);
+}
+
+} // namespace sniper::async

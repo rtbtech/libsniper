@@ -1,5 +1,17 @@
 /*
  * Copyright (c) 2020 - 2022, Oleg Romanenko (oleg@romanenko.ro)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #pragma once
@@ -23,16 +35,14 @@ template<class Query>
 class Group final : public intrusive_cache_unsafe_ref_counter<Group<Query>, GroupsCache<Query>>
 {
 public:
-    void clear() noexcept;
-
-    explicit Group();
-    ~Group();
-
-    void set(const event::loop_ptr& loop, unsigned size);
+    Group();
+    ~Group() noexcept;
 
     void add(Query& p);
+    void then(function<void(const vector<intrusive_ptr<Query>>&)>&& cb) noexcept;
 
-    void then(function<void(const vector<intrusive_ptr<Query>>&)>&& cb);
+    void set(const event::loop_ptr& loop, unsigned size);
+    void clear() noexcept;
 
 private:
     void cb_done(ev::prepare& w, [[maybe_unused]] int revents) noexcept;
@@ -46,7 +56,7 @@ private:
 };
 
 template<class Query>
-Group<Query>& make_group(const event::loop_ptr& loop, unsigned cnt)
+Group<Query>& make(const event::loop_ptr& loop, unsigned cnt = 10)
 {
     auto* group = GroupsCache<Query>::get_raw();
     group->set(loop, cnt);
@@ -63,7 +73,7 @@ Group<Query>::Group()
 }
 
 template<class Query>
-Group<Query>::~Group()
+Group<Query>::~Group() noexcept
 {
     clear();
 }
@@ -83,8 +93,6 @@ void Group<Query>::clear() noexcept
 template<class Query>
 void Group<Query>::set(const event::loop_ptr& l, unsigned int size)
 {
-    clear();
-
     loop = l;
     w_done.set(*loop);
 
@@ -92,7 +100,7 @@ void Group<Query>::set(const event::loop_ptr& l, unsigned int size)
 }
 
 template<class Query>
-void Group<Query>::then(function<void(const vector<intrusive_ptr<Query>>&)>&& cb)
+void Group<Query>::then(function<void(const vector<intrusive_ptr<Query>>&)>&& cb) noexcept
 {
     cb_queries = std::move(cb);
 }
