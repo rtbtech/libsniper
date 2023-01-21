@@ -147,7 +147,8 @@ void Connection::cb_read(ev::io& w, int revents) noexcept
                 return;
             }
 
-            if (_buf = renew_buffer(_buf, _config->buffer_renew_threshold, _processed); !_buf) {
+            if (_buf = renew_buffer(_buf, _config->buffer_renew_threshold, _config->request_max_size, _processed);
+                !_buf) {
                 close();
                 return;
             }

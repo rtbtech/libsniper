@@ -48,11 +48,6 @@ size_t Buffer::size() const noexcept
     return _size;
 }
 
-//size_t Buffer::exceed() const noexcept
-//{
-//    return _size >= (_capacity - _capacity / _threshold);
-//}
-
 BufferState Buffer::read(int fd, uint32_t max_size) noexcept
 {
     if (!_capacity)
@@ -92,11 +87,6 @@ intrusive_ptr<Buffer> make_buffer(size_t size, string_view src) noexcept
     return nullptr;
 }
 
-intrusive_ptr<Buffer> make_buffer(const intrusive_ptr<Buffer>& buf, size_t processed) noexcept
-{
-    return make_buffer(buf->_capacity, buf->tail(processed));
-}
-
 string_view Buffer::tail(size_t processed) const noexcept
 {
     if (_size > processed)
@@ -116,11 +106,16 @@ bool Buffer::fill(string_view data) noexcept
     return false;
 }
 
-intrusive_ptr<Buffer> renew_buffer(const intrusive_ptr<Buffer>& buf, size_t threshold, size_t& processed) noexcept
+intrusive_ptr<Buffer> renew_buffer(const intrusive_ptr<Buffer>& buf, size_t threshold, uint32_t max_size,
+                                   size_t& processed) noexcept
 {
     if (buf->size() >= (buf->capacity() - buf->capacity() / threshold)) {
         // если в буффере осталось места < N%, то выделяем новый и копируем в него хвост
-        auto new_buf = make_buffer(buf, processed);
+
+        if (buf->capacity() * 2 > max_size)
+            return nullptr;
+
+        auto new_buf = make_buffer(buf->capacity() * 2, buf->tail(processed));
         processed = 0;
         return new_buf;
     }

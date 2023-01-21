@@ -58,8 +58,7 @@ private:
 };
 
 [[nodiscard]] intrusive_ptr<Buffer> make_buffer(size_t size, string_view src = {}) noexcept;
-[[nodiscard]] intrusive_ptr<Buffer> make_buffer(const intrusive_ptr<Buffer>& buf, size_t processed) noexcept;
-[[nodiscard]] intrusive_ptr<Buffer> renew_buffer(const intrusive_ptr<Buffer>& buf, size_t threshold,
+[[nodiscard]] intrusive_ptr<Buffer> renew_buffer(const intrusive_ptr<Buffer>& buf, size_t threshold, uint32_t max_size,
                                                  size_t& processed) noexcept;
 
 } // namespace sniper::http
