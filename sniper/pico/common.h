@@ -21,8 +21,8 @@
 
 namespace sniper::pico {
 
-static const size_t MAX_HEADERS = 32u;
-static const size_t MAX_PARAMS = 32u;
+static const size_t MAX_HEADERS = 64u;
+static const size_t MAX_PARAMS = 64u;
 
 enum class ParseResult
 {
