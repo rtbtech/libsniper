@@ -1,5 +1,5 @@
 FIND_PATH(LIBEV_INCLUDE_DIR ev.h /usr/local/include /opt/local/include /usr/include)
-FIND_LIBRARY(LIBEV_LIBRARY NAMES libev.a PATH /usr/local/lib /opt/local/lib /usr/lib)
+FIND_LIBRARY(LIBEV_LIBRARY NAMES libev.a libev.so PATH /usr/local/lib /opt/local/lib /usr/lib)
 
 IF (LIBEV_INCLUDE_DIR AND LIBEV_LIBRARY)
     SET(LIBEV_FOUND TRUE)
