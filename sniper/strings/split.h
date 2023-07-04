@@ -78,4 +78,34 @@ inline bool split(string_view str, string_view delim, Container& out, size_t max
     return !out.empty();
 }
 
+#if __cplusplus >= 202002L
+inline bool split2(const char* s, const char* delims, vector<string_view>& out)
+{
+    out.clear();
+
+    if (!s || !delims)
+        return false;
+
+    char const* q = strpbrk(s, delims);
+    if (!q)
+        return false;
+
+    for (; q != nullptr; q = strpbrk(s, delims)) {
+        if (s != q)
+            out.emplace_back(s, q);
+        else
+            out.emplace_back();
+
+        s = q + 1;
+    }
+
+    if (s)
+        out.emplace_back(s);
+    else
+        out.emplace_back();
+
+    return !out.empty();
+}
+#endif
+
 } // namespace sniper::strings
