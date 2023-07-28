@@ -17,6 +17,7 @@
 #pragma once
 
 #include <sniper/std/string.h>
+#include <sniper/std/vector.h>
 
 namespace sniper::strings {
 
