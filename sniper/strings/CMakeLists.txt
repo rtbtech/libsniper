@@ -9,6 +9,7 @@ set(LIB_HEADERS
     hex.h
     trim.h
     join.h
+    replace.h
     )
 
 set(LIB_SOURCES
